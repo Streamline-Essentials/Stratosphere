@@ -1,0 +1,3 @@
+name: SkyHigh
+version: '${project.version}'
+main: tv.quaint.skyhigh.SkyHigh
