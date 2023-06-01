@@ -15,7 +15,6 @@ public class MemberRole extends PlotRole {
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_GIVE.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_TAKE.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_MOB_DAMAGE.getIdentifier(), true));
-        addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_MOB_SPAWN.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_MOB_TARGET.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_MOB_INTERACT.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_MOB_RIDE.getIdentifier(), true));
@@ -25,6 +24,7 @@ public class MemberRole extends PlotRole {
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_FLY.getIdentifier(), true));
 //        addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_TRAMPLE.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_ANVIL_USE.getIdentifier(), true));
+        addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_BEACON_USE.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_BED_USE.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_BREWING_STAND_USE.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_CAMPFIRE_USE.getIdentifier(), true));

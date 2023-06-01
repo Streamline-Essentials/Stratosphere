@@ -85,7 +85,7 @@ public class PlotPos implements Comparable<PlotPos> {
     }
 
     public World getWorld() {
-        return getPlot().getSkyWorld().getWorld();
+        return getPlot().getWorld();
     }
 
     public Location toLocation() {

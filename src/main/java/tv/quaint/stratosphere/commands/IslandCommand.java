@@ -6,25 +6,35 @@ import net.streamline.api.modules.ModuleUtils;
 import net.streamline.api.savables.users.StreamlineUser;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import tv.quaint.stratosphere.Stratosphere;
+import tv.quaint.stratosphere.config.bits.ConfiguredGenerator;
 import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
+import tv.quaint.stratosphere.plot.members.PlotMember;
 import tv.quaint.stratosphere.plot.pos.PlotPos;
+import tv.quaint.stratosphere.plot.quests.PlotQuest;
 import tv.quaint.stratosphere.plot.schematic.SkyblockSchematic;
 import tv.quaint.stratosphere.plot.schematic.tree.SchemTree;
 import tv.quaint.stratosphere.plot.upgrades.AchievedUpgrade;
+import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
+import tv.quaint.stratosphere.plot.upgrades.UpgradeRegistry;
+import tv.quaint.stratosphere.plot.upgrades.UpgradeTask;
 import tv.quaint.stratosphere.users.SkyblockUser;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
 
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class IslandCommand extends ModuleCommand {
     public IslandCommand() {
-        super(Stratosphere.getInstance(), "island", "skyhigh.command.island", "is");
+        super(Stratosphere.getInstance(), "island", "stratosphere.command.island", "is");
     }
 
     @Override
@@ -78,15 +88,15 @@ public class IslandCommand extends ModuleCommand {
                     plot0.teleport(player);
                     break;
                 case "reload":
-                    if (streamlineUser.hasPermission("skyhigh.command.island.reload")) {
+                    if (streamlineUser.hasPermission("stratosphere.command.island.reload")) {
                         SkyblockIOBus.reload();
                         ModuleUtils.sendMessage(streamlineUser, "&aReloaded the plugin!");
                     } else {
                         ModuleUtils.sendMessage(streamlineUser, MainMessagesHandler.MESSAGES.INVALID.PERMISSIONS.get());
                     }
                     break;
-                case "mainspawn":
-                    if (streamlineUser.hasPermission("skyhigh.command.island.mainspawn")) {
+                case "spawn":
+                    if (streamlineUser.hasPermission("stratosphere.command.island.mainspawn")) {
                         Location location = Stratosphere.getMyConfig().getSpawnLocation();
 
                         if (location == null) {
@@ -102,7 +112,7 @@ public class IslandCommand extends ModuleCommand {
                     }
                     break;
                 case "setspawn":
-                    if (streamlineUser.hasPermission("skyhigh.command.island.setspawn")) {
+                    if (streamlineUser.hasPermission("stratosphere.command.island.setspawn")) {
                         SkyblockPlot plot1 = PlotUtils.getOrGetPlot(player);
 
                         if (plot1 == null) {
@@ -119,25 +129,8 @@ public class IslandCommand extends ModuleCommand {
                         ModuleUtils.sendMessage(streamlineUser, MainMessagesHandler.MESSAGES.INVALID.PERMISSIONS.get());
                     }
                     break;
-                case "spawn":
-                    SkyblockPlot plot3 = PlotUtils.getOrGetPlot(player);
-
-                    if (plot3 == null) {
-                        ModuleUtils.sendMessage(streamlineUser, "&cYou are not a member of a plot!");
-                        return;
-                    }
-
-                    Location location1 = plot3.getSpawnPos().toLocation();
-
-                    if (location1 == null) {
-                        ModuleUtils.sendMessage(streamlineUser, "&cThe spawn location has not been set!");
-                        return;
-                    }
-
-                    plot3.teleport(player);
-                    break;
                 case "addhome":
-                    if (streamlineUser.hasPermission("skyhigh.command.island.addpos")) {
+                    if (streamlineUser.hasPermission("stratosphere.command.island.addpos")) {
                         if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
                             ModuleUtils.sendMessage(streamlineUser, "&cYou must specify a home name!");
                             return;
@@ -188,7 +181,7 @@ public class IslandCommand extends ModuleCommand {
                     plotPos.teleport(player);
                     break;
                 case "setmainspawn":
-                    if (streamlineUser.hasPermission("skyhigh.command.island.setmainspawn")) {
+                    if (streamlineUser.hasPermission("stratosphere.command.island.setmainspawn")) {
                         Location location = player.getLocation();
 
                         Stratosphere.getMyConfig().saveSpawnLoaction(location);
@@ -208,6 +201,8 @@ public class IslandCommand extends ModuleCommand {
                     }
 
                     plot2.getSpawnPos().teleport(player);
+
+                    ModuleUtils.sendMessage(streamlineUser, "&aTeleported to the plot spawn!");
                     break;
                 case "list":
                     int page = 1;
@@ -240,9 +235,11 @@ public class IslandCommand extends ModuleCommand {
                         return;
                     }
 
+                    String uuid = plot4.getUuid();
+
                     plot4.delete();
 
-                    ModuleUtils.sendMessage(streamlineUser, "&aDeleted plot &b" + plot4.getUuid() + "&a!");
+                    ModuleUtils.sendMessage(streamlineUser, "&aDeleted plot &b" + uuid + "&a!");
                     break;
                 case "visit":
                     if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
@@ -252,20 +249,146 @@ public class IslandCommand extends ModuleCommand {
 
                     String targetName = strings[1];
 
-                    Player targetPlayer = Bukkit.getPlayer(targetName);
-                    if (targetPlayer == null) {
-                        ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName + " &cis not online!");
+                    SkyblockUser targetUser = PlotUtils.getOrGetUser(targetName);
+                    if (targetUser == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName + " &cdoes not exist!");
                         return;
                     }
 
-                    SkyblockPlot targetPlot = PlotUtils.getOrGetPlot(targetPlayer);
+                    SkyblockPlot targetPlot = PlotUtils.getOrGetPlot(targetUser);
 
                     if (targetPlot == null) {
                         ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName + " &cdoes not have a plot!");
                         return;
                     }
 
+                    if (targetPlot.isPrivate()) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName + " &cdoes not have a publicly visitable plot!");
+                        return;
+                    }
+
                     targetPlot.teleport(player);
+
+                    ModuleUtils.sendMessage(streamlineUser, "&aTeleported to &b" + targetName + "'s &aplot!");
+                    break;
+                case "join":
+                    if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cUsage: /island join <player>");
+                        return;
+                    }
+
+                    String targetName1 = strings[1];
+
+                    Player targetPlayer1 = Bukkit.getPlayer(targetName1);
+                    if (targetPlayer1 == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName1 + " &cis not online!");
+                        return;
+                    }
+
+                    SkyblockPlot targetPlot1 = PlotUtils.getOrGetPlot(targetPlayer1);
+
+                    if (targetPlot1 == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName1 + " &cdoes not have a plot!");
+                        return;
+                    }
+
+                    if (! targetPlot1.isAnyoneCanJoin()) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName1 + " &cdoes not have an open to join plot!");
+                        return;
+                    }
+
+                    PlotMember member = new PlotMember(player.getUniqueId(), targetPlot1.getMemberRole());
+                    targetPlot1.addMember(member);
+
+                    ModuleUtils.sendMessage(streamlineUser, "&aJoined &b" + targetName1 + "'s &aplot!");
+                    break;
+                case "bypass":
+                    if (! streamlineUser.hasPermission("stratosphere.bypass")) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cYou do not have permission to use this command!");
+                        return;
+                    }
+
+                    SkyblockUser targetUser1 = PlotUtils.getOrGetUser(streamlineUser.getUuid());
+
+                    if (strings.length == 2 && strings[1] != null && ! strings[1].isBlank() && ! strings[1].isEmpty()) {
+                        String targetName2 = strings[1];
+
+                        Player targetPlayer2 = Bukkit.getPlayer(targetName2);
+                        if (targetPlayer2 == null) {
+                            ModuleUtils.sendMessage(streamlineUser, "&cPlayer &b" + targetName2 + " &cis not online!");
+                            return;
+                        }
+
+                        targetUser1 = PlotUtils.getOrGetUser(targetPlayer2.getUniqueId().toString());
+                    }
+
+                    if (targetUser1 == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cCould not find user!");
+                        return;
+                    }
+
+                    targetUser1.setBypassingPlots(! targetUser1.isBypassingPlots());
+
+                    if (! targetUser1.getStreamlineUser().equals(streamlineUser)) {
+                        streamlineUser.sendMessage("&aSet bypassing plots to &f" + targetUser1.isBypassingPlots() + " &afor &f" + targetUser1.getStreamlineUser().getDisplayName() + "&a!");
+                    }
+                    targetUser1.getStreamlineUser().sendMessage("&aYou are now &f" + (targetUser1.isBypassingPlots() ? "bypassing" : "respecting") + " &aplots!");
+                    break;
+                case "top":
+                    SkyblockPlot.PlotType plotType = null;
+
+                    int topAmount = 10;
+
+                    if (strings.length > 1 && strings[1] != null && ! strings[1].isBlank() && ! strings[1].isEmpty()) {
+                        try {
+                            plotType = SkyblockPlot.PlotType.valueOf(strings[1].toUpperCase());
+                        } catch (IllegalArgumentException exception) {
+                            ModuleUtils.sendMessage(streamlineUser, "&cInvalid plot type!");
+                            return;
+                        }
+                        if (strings.length > 2 && strings[2] != null && ! strings[2].isBlank() && ! strings[2].isEmpty()) {
+                            try {
+                                topAmount = Integer.parseInt(strings[2]);
+                            } catch (NumberFormatException exception) {
+                                ModuleUtils.sendMessage(streamlineUser, "&cInvalid amount!");
+                                return;
+                            }
+                        }
+                    }
+
+                    ConcurrentHashMap<Integer, SkyblockPlot> scores;
+
+                    if (plotType == null) {
+                        scores = Stratosphere.getTopConfig().getTopScores(topAmount);
+
+                        ModuleUtils.sendMessage(streamlineUser, "&aTop Islands:");
+                    } else {
+                        scores = Stratosphere.getTopConfig().getTopScores(plotType, topAmount);
+
+                        ModuleUtils.sendMessage(streamlineUser, "&aTop Islands for &f" + plotType.name() + "&a:");
+                    }
+
+                    int position = 1;
+                    for (int topPlotI : scores.keySet()) {
+                        SkyblockPlot plot = scores.get(topPlotI);
+                        if (position > topAmount) {
+                            break;
+                        }
+
+                        streamlineUser.sendMessage("&b#&f" + position + "&7: " + plot.getOwnerAsUser().getDisplayName() + "&7'&es Island " +
+                                "&7(&c" + plot.getPlotType() + "&7) &9-> &f" + plot.calculateScore() + " &escore");
+
+                        position ++;
+                    }
+                    break;
+                case "upgradetype":
+                    SkyblockPlot plot = PlotUtils.getOrGetPlot(player);
+                    if (plot == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cYou are not a member of a plot!");
+                        return;
+                    }
+
+                    plot.upgradeType(player);
                     break;
                 case "invite":
                     if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
@@ -281,18 +404,33 @@ public class IslandCommand extends ModuleCommand {
                         return;
                     }
 
-                    SkyblockPlot plot = PlotUtils.getOrGetPlot(player);
-                    if (plot == null) {
+                    SkyblockPlot plot120 = PlotUtils.getOrGetPlot(player);
+                    if (plot120 == null) {
                         ModuleUtils.sendMessage(streamlineUser, "&cYou are not a member of a plot!");
                         return;
                     }
 
-                    plot.invite(targetPlayer2, streamlineUser);
+                    plot120.invite(targetPlayer2, streamlineUser);
+                    break;
+                case "loadall":
+                    if (! player.hasPermission("streamline.island.loadall")) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cYou do not have permission to use this command!");
+                        return;
+                    }
 
-                    ModuleUtils.sendMessage(streamlineUser, "&aInvited &b" + targetName2 + " &ato your plot!");
+                    CompletableFuture.runAsync(PlotUtils::loadAllPlots);
+                    ModuleUtils.sendMessage(streamlineUser, "&aLoaded all plots!");
+                    break;
+                case "fixall":
+                    if (! player.hasPermission("streamline.island.fixall")) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cYou do not have permission to use this command!");
+                        return;
+                    }
+
+//                    CompletableFuture.runAsync(PlotUtils::restoreAllPlotsToLatestSnapshot);
+                    ModuleUtils.sendMessage(streamlineUser, "&cThis is currently disabled!");
                     break;
                 case "accept":
-                case "join":
                     if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
                         ModuleUtils.sendMessage(streamlineUser, "&cUsage: /island join <player>");
                         return;
@@ -360,15 +498,15 @@ public class IslandCommand extends ModuleCommand {
                     ModuleUtils.sendMessage(streamlineUser, "&aLevel: &b" + plot102.getLevel());
                     break;
                 case "current-plot-role":
-                    SkyblockPlot plot103 = PlotUtils.getPlotByLocation(player.getLocation());
-                    if (plot103 == null) {
+                    SkyblockPlot plot110 = PlotUtils.getPlotByLocation(player.getLocation());
+                    if (plot110 == null) {
                         ModuleUtils.sendMessage(streamlineUser, "&cYou are not inside an island!");
                         return;
                     }
 
                     ModuleUtils.sendMessage(streamlineUser, "&aYour role in this plot is:");
-                    ModuleUtils.sendMessage(streamlineUser, "&7Name: &b" + plot103.getRole(player).getName());
-                    ModuleUtils.sendMessage(streamlineUser, "&7Flags: &b" + plot103.getRole(player).getFlagsString());
+                    ModuleUtils.sendMessage(streamlineUser, "&7Name: &b" + plot110.getRole(player).getName());
+                    ModuleUtils.sendMessage(streamlineUser, "&7Flags: &b" + plot110.getRole(player).getFlagsString());
                     break;
                 case "promote":
                     if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
@@ -458,6 +596,122 @@ public class IslandCommand extends ModuleCommand {
 
                     plot9.kickFromIsland(targetPlayer8, streamlineUser);
                     break;
+                case "upgrade":
+                    if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cUsage: /island upgrade <upgrade>");
+                        return;
+                    }
+
+                    String upgradeName = strings[1];
+
+                    SkyblockPlot plot104 = PlotUtils.getOrGetPlot(player);
+
+                    SkyblockUser user = PlotUtils.getOrGetUser(player.getUniqueId().toString());
+
+                    if (plot104 == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cYou are not a member of a plot!");
+                        return;
+                    }
+
+                    int tier = 1;
+
+                    AchievedUpgrade achievedUpgrade = plot104.getAchievedUpgrade(upgradeName);
+
+                    if (achievedUpgrade != null) tier = achievedUpgrade.getTier() + 1;
+
+                    PlotUpgrade.UpgradeType type;
+                    try {
+                        type = PlotUpgrade.UpgradeType.valueOf(upgradeName.toUpperCase());
+                    } catch (Exception e) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cInvalid upgrade name!");
+                        return;
+                    }
+
+                    UpgradeRegistry.UpgradeIdentifier upgradeIdentifier = new UpgradeRegistry.UpgradeIdentifier(type, tier);
+                    PlotUpgrade plotUpgrade = PlotUtils.getUpgradeRegistry().getGetter().get(upgradeIdentifier, PlotUtils.getUpgradeRegistry());
+
+                    if (plotUpgrade == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cInvalid upgrade name!");
+                        return;
+                    }
+
+                    if (plotUpgrade.getDustCost() > user.getStarDust()) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cYou do not have enough dust to purchase this upgrade!");
+                        return;
+                    }
+
+                    UpgradeTask task = new UpgradeTask(player, plotUpgrade);
+                    plotUpgrade.doUpgrade(plot104, task);
+                    break;
+                case "upgrades":
+                    int page102 = 1;
+
+                    if (strings.length > 1) {
+                        try {
+                            page102 = Integer.parseInt(strings[1]);
+                        } catch (NumberFormatException e) {
+                            ModuleUtils.sendMessage(streamlineUser, "&cUsage: /island quests [page]");
+                            return;
+                        }
+                    }
+
+                    if (Stratosphere.getUpgradeConfig().getLoadedUpgrades().size() <= 0) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cThere are no upgrades loaded!");
+                        return;
+                    }
+
+                    int actualPage = Math.max(1, Math.min(page102, Stratosphere.getUpgradeConfig().getLoadedUpgrades().size()));
+
+                    int maxPages2 = Stratosphere.getUpgradeConfig().getLoadedUpgrades().size();
+
+                    StringBuilder sb102 = new StringBuilder("&aUpgrades &7(&epage &f" + actualPage + " &eof &f" + maxPages2 + "&7):%newline%");
+
+                    PlotUpgrade upgrade = new ArrayList<>(Stratosphere.getUpgradeConfig().getLoadedUpgrades()).get(actualPage - 1);
+                    sb102.append("&7- &b").append(upgrade.getIdentifier());
+                    sb102.append("%newline%   &7> &eType&7: &c").append(upgrade.getType().name());
+                    sb102.append("%newline%   &7> &eTier&7: &f").append(upgrade.getTier());
+//                    sb102.append("%newline%   &7> &ePayload&7: ").append(upgrade.getPayload());
+                    sb102.append("%newline%   &7> &eNeeded Dust&7: &f").append(upgrade.getDustCost());
+                    sb102.append("%newline%   &7> &eDescription&7: &b").append(upgrade.getDescription());
+
+                    ModuleUtils.sendMessage(streamlineUser, sb102.toString());
+                    break;
+                case "generators":
+                    int page103 = 1;
+
+                    if (strings.length > 1) {
+                        try {
+                            page103 = Integer.parseInt(strings[1]);
+                        } catch (NumberFormatException e) {
+                            ModuleUtils.sendMessage(streamlineUser, "&cUsage: /island quests [page]");
+                            return;
+                        }
+                    }
+
+                    if (Stratosphere.getGeneratorConfig().getLoadedGenerators().size() <= 0) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cThere are no generators loaded!");
+                        return;
+                    }
+
+                    int actualPage3 = Math.max(1, Math.min(page103, Stratosphere.getGeneratorConfig().getLoadedGenerators().size()));
+
+                    int maxPages1 = Stratosphere.getGeneratorConfig().getLoadedGenerators().size();
+
+                    StringBuilder sb103 = new StringBuilder("&aGenerators &7(&epage &f" + actualPage3 + " &eof &f" + maxPages1 + "&7):%newline%");
+
+                    ConfiguredGenerator generator = new ArrayList<>(Stratosphere.getGeneratorConfig().getLoadedGenerators()).get(actualPage3 - 1);
+                    sb103.append("&7- &b").append(generator.getIdentifier());
+                    sb103.append("%newline%   &7> &aTier: ").append(generator.getTier());
+//                    sb102.append("%newline%   &7> &aPayload: ").append(upgrade.getPayload());
+                    sb103.append("%newline%   &7> &aMaterials: ");
+                    for (Map.Entry<Material, Double> entry : generator.getMaterials().entrySet()) {
+                        Material material = entry.getKey();
+                        double chance = entry.getValue();
+                        sb103.append("%newline%      &7- &c").append(material.name()).append(" &e(&f").append(chance).append(" &aweight&e)");
+                    }
+
+                    ModuleUtils.sendMessage(streamlineUser, sb103.toString());
+                    break;
                 case "upgraded":
                     int page2 = 1;
 
@@ -476,13 +730,15 @@ public class IslandCommand extends ModuleCommand {
                         return;
                     }
 
-                    StringBuilder sb = new StringBuilder("&aUpgrades:%newline%");
+                    int maxPages = (int) Math.ceil(plot10.getAchievedUpgrades().size() / 10.0);
+
+                    StringBuilder sb = new StringBuilder("&aUpgraded &7(&epage &f" + page2 + " &eof &f" + maxPages + "&7):%newline%");
 
                     int index = 0;
                     final int finalPage = page2;
-                    for (AchievedUpgrade upgrade : plot10.getAchievedUpgrades()) {
+                    for (AchievedUpgrade upgraded : plot10.getAchievedUpgrades()) {
                         if (index >= (finalPage - 1) * 10 && index < finalPage * 10) {
-                            sb.append("&7- &b").append(upgrade.getType().getPrettyName()).append("&7: &a").append(upgrade.getTier());
+                            sb.append("&7- &b").append(upgraded.getType().getPrettyName()).append("&7: &a").append(upgraded.getTier());
                             if (index != plot10.getAchievedUpgrades().size() - 1 && index != finalPage * 10 - 1) {
                                 sb.append("%newline%");
                             }
@@ -490,6 +746,49 @@ public class IslandCommand extends ModuleCommand {
                     }
 
                     ModuleUtils.sendMessage(streamlineUser, sb.toString());
+                    break;
+                case "quests":
+                    int page100 = 1;
+
+                    if (strings.length > 1) {
+                        try {
+                            page100 = Integer.parseInt(strings[1]);
+                        } catch (NumberFormatException e) {
+                            ModuleUtils.sendMessage(streamlineUser, "&cUsage: /island quests [page]");
+                            return;
+                        }
+                    }
+
+                    if (Stratosphere.getQuestConfig().getLoadedQuests().size() <= 0) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cThere are no quests loaded!");
+                        return;
+                    }
+
+                    SkyblockUser questUser = PlotUtils.getOrGetUser(player.getUniqueId().toString());
+                    if (questUser == null) {
+                        ModuleUtils.sendMessage(streamlineUser, "&cCould not find your user!");
+                        return;
+                    }
+
+                    int maxPages3 = Stratosphere.getQuestConfig().getLoadedQuests().size();
+
+                    int actualPage2 = Math.max(1, Math.min(page100, Stratosphere.getQuestConfig().getLoadedQuests().size()));
+
+                    StringBuilder sb100 = new StringBuilder("&aQuests &7(&epage &f" + actualPage2 + " &eof &f" + maxPages3 + "&7):%newline%");
+
+                    PlotQuest quest = new ArrayList<>(Stratosphere.getQuestConfig().getLoadedQuests()).get(actualPage2 - 1);
+                    sb100.append("&7- &b").append(quest.getIdentifier());
+                    sb100.append("%newline%   &7> &eType&7: &c").append(quest.getType().name());
+                    sb100.append("%newline%   &7> &eSub Type&7: &c").append(quest.getThing().getName());
+                    sb100.append("%newline%   &7> &eNeeded Amount&7: &f").append(quest.getAmount());
+//                    sb100.append("%newline%   &7> &aRewards: ");
+//                    for (QuestReward reward : quest.getRewards()) {
+//                        sb100.append("%newline%      &7- &a").append(reward.getType()).append(": &f").append(reward.getPayload());
+//                    }
+                    sb100.append("%newline%   &7> &eDescription&7: &b").append(quest.getDescription());
+                    sb100.append("%newline%%newline%   &7> &eCompleted&7: &b").append(questUser.isQuestCompleted(quest.getIdentifier()));
+
+                    ModuleUtils.sendMessage(streamlineUser, sb100.toString());
                     break;
                 case "schem":
                     if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
@@ -543,8 +842,8 @@ public class IslandCommand extends ModuleCommand {
                                 return;
                             }
 
-                            SkyblockUser user = PlotUtils.getOrGetUser(streamlineUser.getUuid());
-                            user.setSchematicName(schemMap2.getIdentifier());
+                            SkyblockUser user100 = PlotUtils.getOrGetUser(streamlineUser.getUuid());
+                            user100.setSchematicName(schemMap2.getIdentifier());
 
                             ModuleUtils.sendMessage(streamlineUser, "&aLoaded schematic " + schemMap2.getIdentifier() + "!");
                             break;
@@ -594,8 +893,8 @@ public class IslandCommand extends ModuleCommand {
                 case "dust":
                 case "stardust":
                     if (strings.length < 2 || strings[1] == null || strings[1].isBlank() || strings[1].isEmpty()) {
-                        SkyblockUser user = PlotUtils.getOrGetUser(streamlineUser.getUuid());
-                        double dust = user.getStarDust();
+                        SkyblockUser user100 = PlotUtils.getOrGetUser(streamlineUser.getUuid());
+                        double dust = user100.getStarDust();
 
                         streamlineUser.sendMessage("&aYou have &b" + dust + " &astardust!");
 //                        ModuleUtils.sendMessage(streamlineUser, "&cUsage: /island dust <give | take | set> <player> <amount>");
@@ -609,7 +908,7 @@ public class IslandCommand extends ModuleCommand {
                     // /island dust take <player> <amount> // This one IS for admins.
                     // /island dust set <player> <amount> // This one IS for admins.
                     // /island dust add <player> <amount> // This one IS for admins.
-                    // /island dust get <player> // This one is NOT for admins, but requires the permission "skyhigh.island.dust.get".
+                    // /island dust get <player> // This one is NOT for admins, but requires the permission "stratosphere.island.dust.get".
                     // For admin commands, do not subtract or add or set from or to the executor's dust.
                     // Do one at a time.
                     switch (dustAction) {
@@ -631,10 +930,10 @@ public class IslandCommand extends ModuleCommand {
                                 return;
                             }
 
-                            SkyblockUser user = PlotUtils.getOrGetUser(playerToGive);
+                            SkyblockUser user100 = PlotUtils.getOrGetUser(playerToGive);
                             SkyblockUser self = PlotUtils.getOrGetUser(streamlineUser.getUuid());
 
-                            if (user == null) {
+                            if (user100 == null) {
                                 ModuleUtils.sendMessage(streamlineUser, "&cPlayer " + playerToGive + " does not exist!");
                                 return;
                             }
@@ -648,14 +947,14 @@ public class IslandCommand extends ModuleCommand {
                                 return;
                             }
 
-                            user.addStarDust(amountToGive);
+                            user100.addStarDust(amountToGive);
                             self.removeStarDust(amountToGive);
 
                             ModuleUtils.sendMessage(streamlineUser, "&aGave " + playerToGive + " &b" + amountToGive + " &astardust!");
-                            ModuleUtils.sendMessage(user.getStreamlineUser(), "&aYou were given &b" + amountToGive + " &astardust by " + streamlineUser.getName() + "!");
+                            ModuleUtils.sendMessage(user100.getStreamlineUser(), "&aYou were given &b" + amountToGive + " &astardust by " + streamlineUser.getName() + "!");
                             break;
                         case "take":
-                            if (! streamlineUser.hasPermission("skyhigh.admin")) {
+                            if (! streamlineUser.hasPermission("stratosphere.admin")) {
                                 ModuleUtils.sendMessage(streamlineUser, "&cYou do not have permission to use this command!");
                                 return;
                             }
@@ -688,7 +987,7 @@ public class IslandCommand extends ModuleCommand {
                             ModuleUtils.sendMessage(streamlineUser, "&aTook &b" + amountToTake + " &astardust from " + playerToTake + "!");
                             break;
                         case "set":
-                            if (! streamlineUser.hasPermission("skyhigh.admin")) {
+                            if (! streamlineUser.hasPermission("stratosphere.admin")) {
                                 ModuleUtils.sendMessage(streamlineUser, "&cYou do not have permission to use this command!");
                                 return;
                             }
@@ -721,7 +1020,7 @@ public class IslandCommand extends ModuleCommand {
                             ModuleUtils.sendMessage(streamlineUser, "&aSet " + playerToSet + "'s stardust to &b" + amountToSet + "&a!");
                             break;
                         case "add":
-                            if (! streamlineUser.hasPermission("skyhigh.admin")) {
+                            if (! streamlineUser.hasPermission("stratosphere.admin")) {
                                 ModuleUtils.sendMessage(streamlineUser, "&cYou do not have permission to use this command!");
                                 return;
                             }
@@ -754,7 +1053,7 @@ public class IslandCommand extends ModuleCommand {
                             ModuleUtils.sendMessage(streamlineUser, "&aAdded &b" + amountToAdd + " &astardust to " + playerToAdd + "!");
                             break;
                         case "get":
-                            if (! streamlineUser.hasPermission("skyhigh.command.island.dust.get")) {
+                            if (! streamlineUser.hasPermission("stratosphere.command.island.dust.get")) {
                                 ModuleUtils.sendMessage(streamlineUser, "&cYou do not have permission to use this command!");
                                 return;
                             }
@@ -776,6 +1075,7 @@ public class IslandCommand extends ModuleCommand {
                             ModuleUtils.sendMessage(streamlineUser, "&a" + playerToGet + " has &b" + user5.getStarDust() + " &astardust!");
                             break;
                     }
+                    break;
                 default:
                     // Grab the help menu from the switch statements above.
                     StringBuilder builder = new StringBuilder("&b&lIsland Help\n");

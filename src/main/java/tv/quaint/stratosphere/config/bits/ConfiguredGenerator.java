@@ -46,9 +46,13 @@ public class ConfiguredGenerator implements Identifiable {
         ConcurrentSkipListMap<Double, Material> polling = new ConcurrentSkipListMap<>();
 
         getMaterials().forEach((material, chance) -> {
-            Double highest = polling.lastKey();
-            if (highest == null) highest = 0.0;
-
+            Double highest = 0.0;
+            try {
+                highest = polling.lastKey();
+                if (highest == null) highest = 0.0;
+            } catch (Exception e) {
+                // do nothing
+            }
             polling.put(highest + chance, material);
         });
 
@@ -65,9 +69,67 @@ public class ConfiguredGenerator implements Identifiable {
         materials.put(Material.GRANITE, 5.0);
         materials.put(Material.DIORITE, 5.0);
         materials.put(Material.ANDESITE, 10.0);
-        materials.put(Material.COAL, 15.0);
+        materials.put(Material.COAL_ORE, 15.0);
         materials.put(Material.IRON_ORE, 15.0);
-        // do the above values add up to 100.0: yes
+        return materials;
+    }
+
+    public static ConcurrentSkipListMap<Material, Double> getDefaultGenerator2() {
+        ConcurrentSkipListMap<Material, Double> materials = new ConcurrentSkipListMap<>();
+        materials.put(Material.COBBLESTONE, 15.0);
+        materials.put(Material.STONE, 25.0);
+        materials.put(Material.GRANITE, 2.5);
+        materials.put(Material.DIORITE, 2.5);
+        materials.put(Material.ANDESITE, 5.0);
+        materials.put(Material.COAL_ORE, 25.0);
+        materials.put(Material.IRON_ORE, 25.0);
+        return materials;
+    }
+
+    public static ConcurrentSkipListMap<Material, Double> getDefaultGenerator3() {
+        ConcurrentSkipListMap<Material, Double> materials = new ConcurrentSkipListMap<>();
+        materials.put(Material.COBBLESTONE, 2.0);
+        materials.put(Material.STONE, 5.0);
+        materials.put(Material.GRANITE, 1.0);
+        materials.put(Material.DIORITE, 1.0);
+        materials.put(Material.ANDESITE, 1.0);
+        materials.put(Material.COAL_ORE, 25.0);
+        materials.put(Material.IRON_ORE, 25.0);
+        materials.put(Material.GOLD_ORE, 20.0);
+        materials.put(Material.REDSTONE_ORE, 20.0);
+        return materials;
+    }
+
+    public static ConcurrentSkipListMap<Material, Double> getDefaultGenerator4() {
+        ConcurrentSkipListMap<Material, Double> materials = new ConcurrentSkipListMap<>();
+        materials.put(Material.COBBLESTONE, 2.0);
+        materials.put(Material.STONE, 5.0);
+        materials.put(Material.GRANITE, 1.0);
+        materials.put(Material.DIORITE, 1.0);
+        materials.put(Material.ANDESITE, 1.0);
+        materials.put(Material.COAL_ORE, 25.0);
+        materials.put(Material.IRON_ORE, 20.0);
+        materials.put(Material.GOLD_ORE, 10.0);
+        materials.put(Material.REDSTONE_ORE, 20.0);
+        materials.put(Material.DIAMOND_ORE, 5.0);
+        materials.put(Material.LAPIS_ORE, 10.0);
+        return materials;
+    }
+
+    public static ConcurrentSkipListMap<Material, Double> getDefaultGenerator5() {
+        ConcurrentSkipListMap<Material, Double> materials = new ConcurrentSkipListMap<>();
+        materials.put(Material.COBBLESTONE, 2.0);
+        materials.put(Material.STONE, 5.0);
+        materials.put(Material.GRANITE, 1.0);
+        materials.put(Material.DIORITE, 1.0);
+        materials.put(Material.ANDESITE, 1.0);
+        materials.put(Material.COAL_ORE, 25.0);
+        materials.put(Material.IRON_ORE, 20.0);
+        materials.put(Material.GOLD_ORE, 10.0);
+        materials.put(Material.REDSTONE_ORE, 20.0);
+        materials.put(Material.DIAMOND_ORE, 5.0);
+        materials.put(Material.LAPIS_ORE, 5.0);
+        materials.put(Material.EMERALD_ORE, 5.0);
         return materials;
     }
 }

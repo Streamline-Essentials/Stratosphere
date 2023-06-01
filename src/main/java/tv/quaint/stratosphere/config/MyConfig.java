@@ -6,11 +6,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import tv.quaint.stratosphere.Stratosphere;
+import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.schematic.SkyblockSchematic;
 import tv.quaint.stratosphere.plot.schematic.tree.BranchType;
 import tv.quaint.stratosphere.plot.schematic.tree.SchemBranch;
 import tv.quaint.stratosphere.plot.schematic.tree.SchemTree;
 import tv.quaint.storage.resources.flat.simple.SimpleConfiguration;
+import tv.quaint.stratosphere.world.SkyblockIOBus;
 
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,8 +35,11 @@ public class MyConfig extends SimpleConfiguration {
         getSaveIntervalInTicks();
 
         // Island Stuff.
+        getIslandBufferDistance();
         getIslandAbsoluteSize();
-        getIslandFolderName();
+        getIslandDefaultSize();
+        getIslandDefaultY();
+        getIslandWorldName();
 
         // Schematic Stuff.
         write("schematics.default.normal", "normal");
@@ -71,19 +76,31 @@ public class MyConfig extends SimpleConfiguration {
         return getResource().getOrSetDefault("database.saveIntervalInTicks", 20 * 60 * 5);
     }
 
-    public int getIslandBufferDistance() {
+    public double getIslandBufferDistance() {
         reloadResource();
 
-        return getResource().getOrSetDefault("island.size.buffer", 512);
+        return getResource().getOrSetDefault("island.size.buffer", 512d);
     }
 
-    public int getIslandAbsoluteSize() {
+    public double getIslandAbsoluteSize() {
         reloadResource();
 
-        return getResource().getOrSetDefault("island.size.absolute", 1600);
+        return getResource().getOrSetDefault("island.size.absolute", 1600d);
     }
 
-    public String getIslandFolderName() {
+    public double getIslandDefaultSize() {
+        reloadResource();
+
+        return getResource().getOrSetDefault("island.size.default", 50d);
+    }
+
+    public int getIslandDefaultY() {
+        reloadResource();
+
+        return getResource().getOrSetDefault("island.default-y-height", 150);
+    }
+
+    public String getIslandWorldName() {
         reloadResource();
 
         return getResource().getOrSetDefault("island.world.name", "Stratosphere");
@@ -175,5 +192,59 @@ public class MyConfig extends SimpleConfiguration {
         getResource().set("spawn.z", location.getZ());
         getResource().set("spawn.yaw", location.getYaw());
         getResource().set("spawn.pitch", location.getPitch());
+    }
+
+    public void saveCurrentPlotPosition(Location location) {
+        if (location == null) return;
+        if (location.getWorld() == null) return;
+
+        getResource().set("current-plot.world", location.getWorld().getName());
+        getResource().set("current-plot.x", location.getX());
+        getResource().set("current-plot.y", location.getY());
+        getResource().set("current-plot.z", location.getZ());
+        getResource().set("current-plot.yaw", location.getYaw());
+        getResource().set("current-plot.pitch", location.getPitch());
+    }
+
+    public Location getNextPlotPosition() {
+        reloadResource();
+
+        String world = getResource().getOrSetDefault("current-plot.world", getIslandWorldName());
+        double x = getResource().getOrSetDefault("current-plot.x", 0.0d);
+        double y = getResource().getOrSetDefault("current-plot.y", 0.0d);
+        double z = getResource().getOrSetDefault("current-plot.z", 0.0d);
+        float yaw = getResource().getOrSetDefault("current-plot.yaw", 0.0f);
+        float pitch = getResource().getOrSetDefault("current-plot.pitch", 0.0f);
+
+        World bukkitWorld = SkyblockIOBus.getOrGetSkyblockWorld();
+        if (bukkitWorld == null) return null;
+        bukkitWorld.getWorldBorder().setCenter(0, 0);
+        bukkitWorld.getWorldBorder().setSize(30000000);
+
+        Location currentLocation = new Location(bukkitWorld, x, y, z, yaw, pitch);
+        Location nextLocation = currentLocation.clone();
+
+        int x_add = (int) (Math.ceil(getIslandAbsoluteSize() + getIslandBufferDistance()));
+        int z_add = (int) (Math.ceil(getIslandAbsoluteSize() + getIslandBufferDistance()));
+
+        double x_next = nextLocation.getX() + x_add;
+        double z_next = nextLocation.getZ();
+
+        if (x_next > 1000000d) {
+            x_next = 0;
+            z_next = z_next + z_add;
+            if (z_next > 1000000d) {
+                z_next = -1000000d;
+            }
+        }
+
+        if (z_next > 1000000d) {
+            z_next = 0;
+        }
+
+        nextLocation.setX(x_next);
+        nextLocation.setZ(z_next);
+
+        return nextLocation;
     }
 }

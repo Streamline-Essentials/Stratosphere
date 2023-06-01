@@ -5,9 +5,21 @@ import lombok.Setter;
 import net.streamline.api.modules.ModuleUtils;
 import net.streamline.api.savables.SavableResource;
 import net.streamline.api.savables.users.StreamlineUser;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
+import tv.quaint.stratosphere.plot.SkyblockPlot;
+import tv.quaint.stratosphere.plot.quests.PlotQuest;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
 import tv.quaint.storage.documents.SimpleJsonDocument;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 public class SkyblockUser extends SavableResource {
     public static class SkyblockUserSerializer extends SimpleJsonDocument {
@@ -32,9 +44,22 @@ public class SkyblockUser extends SavableResource {
     private String plotUuid;
     @Getter @Setter
     private double starDust;
+    @Getter @Setter
+    private List<String> completedQuests;
+    @Getter @Setter
+    private String username;
+    @Getter @Setter
+    private boolean bypassingPlots;
 
     public SkyblockUser(String uuid) {
         super(uuid, new SkyblockUserSerializer(uuid));
+
+        StreamlineUser user = getStreamlineUser();
+        if (user != null) {
+            username = user.getName();
+        }
+
+        completedQuests = new ArrayList<>();
     }
 
     public void forceReload() {
@@ -46,6 +71,9 @@ public class SkyblockUser extends SavableResource {
         plotUuid = getOrSetDefault("plot-id", "");
         schematicName = getOrSetDefault("schematic-name", "");
         starDust = getOrSetDefault("star-dust", 0.0d);
+        completedQuests = getOrSetDefault("completed-quests", new ArrayList<>());
+        username = getOrSetDefault("username", "");
+        bypassingPlots = getOrSetDefault("bypassing-plots", false);
     }
 
     @Override
@@ -53,6 +81,9 @@ public class SkyblockUser extends SavableResource {
         plotUuid = getOrSetDefault("plot-id", "");
         schematicName = getOrSetDefault("schematic-name", "");
         starDust = getOrSetDefault("star-dust", 0.0d);
+        completedQuests = getOrSetDefault("completed-quests", new ArrayList<>());
+        username = getOrSetDefault("username", "");
+        bypassingPlots = getOrSetDefault("bypassing-plots", false);
     }
 
     @Override
@@ -60,6 +91,9 @@ public class SkyblockUser extends SavableResource {
         set("plot-id", plotUuid);
         set("schematic-name", schematicName);
         set("star-dust", starDust);
+        set("completed-quests", completedQuests);
+        set("username", username);
+        set("bypassing-plots", bypassingPlots);
     }
 
     public void addStarDust(double amount) {
@@ -83,6 +117,60 @@ public class SkyblockUser extends SavableResource {
 
     public StreamlineUser getStreamlineUser() {
         return ModuleUtils.getOrGetUser(getIdentifier());
+    }
+
+    public SkyblockPlot getOrGetPlot() {
+        return PlotUtils.getOrGetPlot(plotUuid);
+    }
+
+    public ConcurrentSkipListSet<PlotQuest> getCompletedQuestsAsQuests() {
+        ConcurrentSkipListSet<PlotQuest> quests = new ConcurrentSkipListSet<>();
+
+        for (String questId : completedQuests) {
+            PlotQuest quest = Stratosphere.getQuestConfig().getQuest(questId);
+            if (quest != null) quests.add(quest);
+        }
+
+        return quests;
+    }
+
+    public boolean isQuestCompleted(String identifier) {
+        if (identifier == null) return false;
+        if (completedQuests == null) return false;
+
+        return completedQuests.contains(identifier);
+    }
+
+    public void addCompletedQuest(String identifier) {
+        if (identifier == null) return;
+        if (completedQuests == null) completedQuests = new ArrayList<>();
+
+        completedQuests.add(identifier);
+        saveAll();
+    }
+
+    public void removeCompletedQuest(String identifier) {
+        if (identifier == null) return;
+        if (completedQuests == null) completedQuests = new ArrayList<>();
+
+        completedQuests.remove(identifier);
+        saveAll();
+    }
+
+    public void load() {
+        PlotUtils.loadUser(this);
+    }
+
+    public void unload() {
+        PlotUtils.unloadUser(getUuid());
+    }
+
+    public Player getBukkitPlayer() {
+        return Bukkit.getPlayer(UUID.fromString(getUuid()));
+    }
+
+    public boolean isOnline() {
+        return getBukkitPlayer() != null;
     }
 
     public static SkyblockUser transpose(StreamlineUser user) {

@@ -29,19 +29,38 @@ public class PlotRole implements Comparable<PlotRole> {
     }
 
     public void addFlag(PlotFlag flag) {
+        removeFlag(flag);
         flags.add(flag);
     }
 
     public void addFlags(PlotFlag... flags) {
+        removeFlags(flags);
         this.flags.addAll(Arrays.asList(flags));
     }
 
     public void addFlag(String identifier, String value) {
+        removeFlag(identifier);
         flags.add(new PlotFlag(identifier, value));
     }
 
     public void removeFlag(PlotFlag flag) {
-        flags.remove(flag);
+        flags.removeIf(fl -> fl.getIdentifier().equals(flag.getIdentifier()));
+    }
+
+    public void removeFlag(String identifier) {
+        flags.removeIf(fl -> fl.getIdentifier().equals(identifier));
+    }
+
+    public void removeFlags(PlotFlag... flags) {
+        getFlags().removeIf(flag -> {
+            String identifier = flag.getIdentifier();
+
+            for (PlotFlag fl : flags) {
+                if (fl.getIdentifier().equals(identifier)) return true;
+            }
+
+            return false;
+        });
     }
 
     public boolean hasFlag(String identifier) {
@@ -87,7 +106,7 @@ public class PlotRole implements Comparable<PlotRole> {
     public PlotFlag getFlag(String identifier, boolean countParents) {
         PlotFlag flag = getSelfFlag(identifier);
         if (flag != null) return flag;
-        if (! countParents) return null;
+        if (! countParents || Objects.equals(identifier, PlotFlagIdentifiers.PARENT.getIdentifier())) return null;
 
         PlotRole parent = getParent();
         int i = 0;

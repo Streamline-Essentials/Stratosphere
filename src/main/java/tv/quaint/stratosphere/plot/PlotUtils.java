@@ -5,13 +5,18 @@ import lombok.Setter;
 import net.streamline.api.configs.given.CachedUUIDsHandler;
 import net.streamline.api.savables.users.StreamlineUser;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import tv.quaint.stratosphere.Stratosphere;
+import tv.quaint.stratosphere.config.MetaDataConfig;
+import tv.quaint.stratosphere.plot.quests.QuestContainer;
 import tv.quaint.stratosphere.plot.schematic.tree.SchemTree;
-import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
 import tv.quaint.stratosphere.plot.upgrades.UpgradeRegistry;
 import tv.quaint.stratosphere.users.SkyblockUser;
+import tv.quaint.stratosphere.world.SkyblockIOBus;
 
+import java.io.File;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -21,81 +26,29 @@ public class PlotUtils {
     @Getter @Setter
     private static UpgradeRegistry upgradeRegistry;
 
-    public static void init() {
+    public static void initImmediately() {
         upgradeRegistry = new UpgradeRegistry();
-
-        for (int i = 1; i <= 10; i++) {
-            int finalI = i;
-            new PlotUpgrade(PlotUpgrade.Type.MOB_SPAWN_RATE, i, (plot, task) -> {
-                plot.setTier(PlotUpgrade.Type.MOB_SPAWN_RATE, finalI);
-
-                plot.messageMembers("&aYour mob spawn rate has been upgraded to tier &f" + finalI + "&a!");
-
-                return true;
-            });
-
-            new PlotUpgrade(PlotUpgrade.Type.MOB_SPAWN_CAP, i, (plot, task) -> {
-                plot.setTier(PlotUpgrade.Type.MOB_SPAWN_CAP, finalI);
-
-                plot.messageMembers("&aYour mob spawn cap has been upgraded to tier &f" + finalI + "&a!");
-
-                return true;
-            });
-
-            new PlotUpgrade(PlotUpgrade.Type.PLOT_SIZE, i, (plot, task) -> {
-                plot.setTier(PlotUpgrade.Type.PLOT_SIZE, finalI);
-
-                plot.messageMembers("&aYour plot size has been upgraded to tier &f" + finalI + "&a!");
-
-                return true;
-            });
-
-            new PlotUpgrade(PlotUpgrade.Type.PARTY_SIZE, i, (plot, task) -> {
-                plot.setTier(PlotUpgrade.Type.PARTY_SIZE, finalI);
-
-                plot.messageMembers("&aYour party size has been upgraded to tier &f" + finalI + "&a!");
-
-                return true;
-            });
-
-            new PlotUpgrade(PlotUpgrade.Type.ISLAND_LEVEL, i, (plot, task) -> {
-                plot.setTier(PlotUpgrade.Type.ISLAND_LEVEL, finalI);
-
-                plot.messageMembers("&aYour island level has been upgraded to tier &f" + finalI + "&a!");
-
-                return true;
-            });
-
-            new PlotUpgrade(PlotUpgrade.Type.ISLAND_LEVEL_CAP, i, (plot, task) -> {
-                plot.setTier(PlotUpgrade.Type.ISLAND_LEVEL_CAP, finalI);
-
-                plot.messageMembers("&aYour island level cap has been upgraded to tier &f" + finalI + "&a!");
-
-                return true;
-            });
-        }
-
     }
 
     @Getter @Setter
     private static ConcurrentSkipListSet<SkyblockPlot> plots = new ConcurrentSkipListSet<>();
 
-    public static void addPlot(SkyblockPlot plot) {
+    public static void loadPlot(SkyblockPlot plot) {
         plots.add(plot);
     }
 
-    public static void removePlot(String uuid) {
+    public static void unloadPlot(String uuid) {
         getPlots().forEach(plot -> {
             if (plot.getUuid().equals(uuid)) getPlots().remove(plot);
         });
     }
 
-    public static void removePlot(UUID uuid) {
-        removePlot(uuid.toString());
+    public static void unloadPlot(UUID uuid) {
+        unloadPlot(uuid.toString());
     }
 
-    public static void removePlot(SkyblockPlot plot) {
-        removePlot(UUID.fromString(plot.getUuid()));
+    public static void unloadPlot(SkyblockPlot plot) {
+        unloadPlot(UUID.fromString(plot.getUuid()));
     }
 
     public static ConcurrentSkipListMap<String, SkyblockPlot> getPlotsByUUIDs() {
@@ -144,8 +97,8 @@ public class PlotUtils {
         SkyblockPlot plot = getPlot(uuid);
         if (plot != null) return plot;
 
-        plot = new SkyblockPlot(uuid, null, false);
-        addPlot(plot);
+        plot = new SkyblockPlot(uuid);
+        loadPlot(plot);
 
         return plot;
     }
@@ -158,12 +111,16 @@ public class PlotUtils {
         return getOrGetPlot(plotUuid);
     }
 
-    public static boolean isPlot(String uuid) {
+    public static boolean isPlotLoaded(SkyblockPlot plot) {
+        return isPlotLoaded(plot.getUuid());
+    }
+
+    public static boolean isPlotLoaded(String uuid) {
         return getPlotsByUUIDs().containsKey(uuid);
     }
 
-    public static boolean isPlot(UUID uuid) {
-        return isPlot(uuid.toString());
+    public static boolean isPlotLoaded(UUID uuid) {
+        return isPlotLoaded(uuid.toString());
     }
 
     public static SkyblockPlot createPlot(StreamlineUser owner, String schemTreeName) {
@@ -178,16 +135,23 @@ public class PlotUtils {
             return null;
         }
 
-        Stratosphere.getInstance().logDebug("SchemTree: " + schemTree);
-
         SkyblockUser user = getOrGetUser(owner.getUuid());
-        Stratosphere.getInstance().logDebug("User: " + user);
-        SkyblockPlot plot = new SkyblockPlot(owner.getUuid(), schemTree, true);
+
+        Location nextPlotLocation = Stratosphere.getMyConfig().getNextPlotPosition();
+        if (nextPlotLocation == null) {
+            World skyblockWorld = SkyblockIOBus.getOrGetSkyblockWorld();
+            int plotDefaultHeight = Stratosphere.getMyConfig().getIslandDefaultY();
+            nextPlotLocation = new Location(skyblockWorld, 0, plotDefaultHeight, 0);
+        }
+
+        SkyblockPlot plot = new SkyblockPlot(owner.getUuid(), schemTree, nextPlotLocation);
+
+        Stratosphere.getMyConfig().saveCurrentPlotPosition(nextPlotLocation);
 
         user.setPlotUuid(plot.getUuid());
         user.saveAll();
 
-        addPlot(plot);
+        loadPlot(plot);
 
         return plot;
     }
@@ -246,5 +210,60 @@ public class PlotUtils {
 
     public static boolean isUserLoaded(String uuid) {
         return getUser(uuid) != null;
+    }
+
+    public static void loadAllUsers() {
+        File[] files = SkyblockIOBus.getUsersFolder().listFiles();
+        if (files == null) return;
+
+        for (File file : files) {
+            if (! file.exists()) return;
+            if (! file.getName().endsWith(".json")) return;
+
+            String uuid = file.getName().replace(".json", "");
+
+            SkyblockUser user = getOrGetUser(uuid);
+            if (user != null) user.load();
+        }
+    }
+
+    public static void loadAllPlots() {
+        File[] files = SkyblockIOBus.getPlotFolder().listFiles();
+        if (files == null) return;
+
+        for (File file : files) {
+            if (! file.exists()) return;
+            if (! file.getName().endsWith(".json")) return;
+
+            String uuid = file.getName().replace(".json", "");
+
+            SkyblockPlot plot = getOrGetPlot(uuid);
+            if (! plot.isLoaded()) plot.load();
+        }
+    }
+
+    public static void restoreAllPlotsToLatestSnapshot() {
+        getPlots().forEach(SkyblockPlot::restoreToLatestSnapshot);
+    }
+
+    public static QuestContainer getOrGetQuester(String uuid) {
+        ConcurrentSkipListSet<QuestContainer> containers = MetaDataConfig.getQuesters();
+
+        AtomicReference<QuestContainer> container = new AtomicReference<>(null);
+
+        containers.forEach(c -> {
+            if (container.get() != null) return;
+
+            if (c.getIdentifier().equals(uuid)) container.set(c);
+        });
+
+        if (container.get() != null) return container.get();
+
+        QuestContainer questContainer = new QuestContainer(uuid);
+        questContainer.save();
+
+        MetaDataConfig.getQuesters().add(questContainer);
+
+        return questContainer;
     }
 }

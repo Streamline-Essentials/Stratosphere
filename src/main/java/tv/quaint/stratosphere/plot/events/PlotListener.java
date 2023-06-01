@@ -15,6 +15,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
+import org.bukkit.event.vehicle.VehicleCreateEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
@@ -31,6 +32,22 @@ import tv.quaint.stratosphere.plot.pos.PlotFlagIdentifiers;
  * It will use the PlotFlag class to determine what a player can and cannot do.
  */
 public class PlotListener implements Listener {
+    public static boolean shouldCancel(Player player, String flag) {
+        SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
+        if (plot == null) return false;
+
+        PlotRole role = plot.getRole(player);
+        if (role == null) {
+            return true;
+        }
+
+        boolean can = false;
+        if (role.hasFlag(flag)) {
+            can = Boolean.parseBoolean(role.getFlag(flag).getValue());
+        }
+        return ! can;
+    }
+
     /**
      * Block break event.
      * This is a Player flag event.
@@ -40,23 +57,7 @@ public class PlotListener implements Listener {
         Player player = event.getPlayer();
         Block block = event.getBlock();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(block.getLocation());
-        if (plot == null) {
-            Stratosphere.getInstance().logDebug("Plot is null");
-            return;
-        }
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_BREAK.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_BREAK.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_BREAK.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -71,20 +72,7 @@ public class PlotListener implements Listener {
         Player player = event.getPlayer();
         Block block = event.getBlock();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(block.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_PLACE.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_PLACE.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_PLACE.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -101,20 +89,7 @@ public class PlotListener implements Listener {
 
         Player player = (Player) event.getDamager();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_GIVE.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_GIVE.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_GIVE.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -131,20 +106,7 @@ public class PlotListener implements Listener {
 
         Player player = (Player) event.getEntity();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_TAKE.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_TAKE.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_TAKE.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -160,33 +122,16 @@ public class PlotListener implements Listener {
 
         Player player = (Player) event.getDamager();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
         // check if it is a living entity
         if (event.getEntity() instanceof LivingEntity) {
-            boolean can = false;
-            if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_DAMAGE.getIdentifier())) {
-                can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_DAMAGE.getIdentifier()).getValue());
-            }
-            if (! can) {
+            if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_DAMAGE.getIdentifier())) {
                 event.setCancelled(true);
                 return;
             }
 
             // check if it is a villager
             if (event.getEntity() instanceof Villager) {
-                boolean canVillager = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_VILLAGER_DAMAGE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_VILLAGER_DAMAGE.getIdentifier()).getValue());
-                }
-                if (! canVillager) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_VILLAGER_DAMAGE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -197,11 +142,7 @@ public class PlotListener implements Listener {
         if (event.getEntity() instanceof Tameable) {
             Tameable tameable = (Tameable) event.getEntity();
             if (tameable.getOwner() != player) {
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_PET_DAMAGE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_PET_DAMAGE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_PET_DAMAGE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -210,11 +151,7 @@ public class PlotListener implements Listener {
 
         // check if it is a vehicle
         if (event.getEntity() instanceof Vehicle) {
-            boolean can = false;
-            if (role.hasFlag(PlotFlagIdentifiers.CAN_VEHICLE_DESTROY.getIdentifier())) {
-                can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_VEHICLE_DESTROY.getIdentifier()).getValue());
-            }
-            if (! can) {
+            if (shouldCancel(player, PlotFlagIdentifiers.CAN_VEHICLE_DESTROY.getIdentifier())) {
                 event.setCancelled(true);
                 return;
             }
@@ -252,20 +189,7 @@ public class PlotListener implements Listener {
 
         Player player = (Player) event.getTarget();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_TARGET.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_TARGET.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_TARGET.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -322,20 +246,7 @@ public class PlotListener implements Listener {
         Player player = event.getPlayer();
         Entity entity = event.getRightClicked();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(entity.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_INTERACT.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_INTERACT.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_INTERACT.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -372,20 +283,7 @@ public class PlotListener implements Listener {
 
         Player player = (Player) event.getEntered();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(event.getVehicle().getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_RIDE.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_RIDE.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_RIDE.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -401,20 +299,7 @@ public class PlotListener implements Listener {
 
         Player player = (Player) event.getBreeder();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(event.getEntity().getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_BREED.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_BREED.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_BREED.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -430,20 +315,7 @@ public class PlotListener implements Listener {
 
         Player player = (Player) event.getOwner();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(event.getEntity().getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_TAME.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_TAME.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_TAME.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -458,20 +330,7 @@ public class PlotListener implements Listener {
         Player player = event.getPlayer();
         Entity entity = event.getEntity();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(entity.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            event.setCancelled(true);
-            return;
-        }
-
-        boolean can = false;
-        if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_SHEAR.getIdentifier())) {
-            can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_SHEAR.getIdentifier()).getValue());
-        }
-        if (! can) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_SHEAR.getIdentifier())) {
             event.setCancelled(true);
             return;
         }
@@ -532,14 +391,49 @@ public class PlotListener implements Listener {
         if (role.hasFlag(PlotFlagIdentifiers.CAN_FLY.getIdentifier())) {
             can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_FLY.getIdentifier()).getValue());
             if (! can) {
-                player.setAllowFlight(false);
+                if (player.getAllowFlight()) {
+                    player.setAllowFlight(false);
+                }
                 if (player.isFlying()) {
                     player.setFlying(false);
                     plot.getSpawnPos().teleport(player);
                 }
                 return;
             } else {
-                player.setAllowFlight(true);
+                if (! player.getAllowFlight()) {
+                    player.setAllowFlight(true);
+                    if (! player.isFlying()) {
+                        player.setFlying(true);
+                    }
+                }
+                return;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEntityInteract(PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_INTERACT.getIdentifier())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_INTERACT.getIdentifier())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        if (event.getRightClicked() instanceof ItemFrame) {
+            if (shouldCancel(player, PlotFlagIdentifiers.CAN_ITEM_FRAME_ROTATE.getIdentifier())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+        if (event.getRightClicked() instanceof Villager) {
+            if (shouldCancel(player, PlotFlagIdentifiers.CAN_VILLAGER_TRADE.getIdentifier())) {
+                event.setCancelled(true);
                 return;
             }
         }
@@ -553,24 +447,50 @@ public class PlotListener implements Listener {
     public void onCanTrample(PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
-        SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
-        if (plot == null) return;
-
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
+        if (shouldCancel(player, PlotFlagIdentifiers.CAN_INTERACT.getIdentifier())) {
             event.setCancelled(true);
             return;
+        }
+
+        if (event.getAction().name().contains("RIGHT") && event.getClickedBlock() != null) {
+            if (event.getItem() != null) {
+                // Check for all Vehicle items:
+                if (event.getItem().getType() == Material.MINECART ||
+                        event.getItem().getType() == Material.CHEST_MINECART ||
+                        event.getItem().getType() == Material.COMMAND_BLOCK_MINECART ||
+                        event.getItem().getType() == Material.FURNACE_MINECART ||
+                        event.getItem().getType() == Material.HOPPER_MINECART ||
+                        event.getItem().getType() == Material.TNT_MINECART ||
+
+                        event.getItem().getType() == Material.ACACIA_CHEST_BOAT ||
+                        event.getItem().getType() == Material.BIRCH_CHEST_BOAT ||
+                        event.getItem().getType() == Material.DARK_OAK_CHEST_BOAT ||
+                        event.getItem().getType() == Material.JUNGLE_CHEST_BOAT ||
+                        event.getItem().getType() == Material.OAK_CHEST_BOAT ||
+                        event.getItem().getType() == Material.SPRUCE_CHEST_BOAT ||
+                        event.getItem().getType() == Material.MANGROVE_CHEST_BOAT ||
+
+                        event.getItem().getType() == Material.ACACIA_BOAT ||
+                        event.getItem().getType() == Material.BIRCH_BOAT ||
+                        event.getItem().getType() == Material.DARK_OAK_BOAT ||
+                        event.getItem().getType() == Material.JUNGLE_BOAT ||
+                        event.getItem().getType() == Material.OAK_BOAT ||
+                        event.getItem().getType() == Material.SPRUCE_BOAT ||
+                        event.getItem().getType() == Material.MANGROVE_BOAT
+                ) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_VEHICLE_PLACE.getIdentifier())) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                }
+            }
         }
 
         if (event.getAction() == Action.PHYSICAL) {
             if (event.getClickedBlock() == null) return;
 
             if (event.getClickedBlock().getType() == Material.FARMLAND) {
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_TRAMPLE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_TRAMPLE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_TRAMPLE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -590,11 +510,7 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.HEAVY_WEIGHTED_PRESSURE_PLATE ||
                     event.getClickedBlock().getType() == Material.TRIPWIRE ||
                     event.getClickedBlock().getType() == Material.TRIPWIRE_HOOK) {
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_TRIGGER_REDSTONE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_TRIGGER_REDSTONE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_TRIGGER_REDSTONE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -624,13 +540,7 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.REDSTONE_WIRE ||
                     event.getClickedBlock().getType() == Material.OBSERVER
             ) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_TRIGGER_REDSTONE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_TRIGGER_REDSTONE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_TRIGGER_REDSTONE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -658,13 +568,7 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.RED_SHULKER_BOX ||
                     event.getClickedBlock().getType() == Material.WHITE_SHULKER_BOX ||
                     event.getClickedBlock().getType() == Material.YELLOW_SHULKER_BOX) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_CONTAINER_ACCESS.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_CONTAINER_ACCESS.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_CONTAINER_ACCESS.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -673,25 +577,13 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.CHIPPED_ANVIL ||
                     event.getClickedBlock().getType() == Material.DAMAGED_ANVIL
             ) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_ANVIL_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ANVIL_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_ANVIL_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
             }
             if (event.getClickedBlock().getType() == Material.BEACON) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_BEACON_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_BEACON_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_BEACON_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -713,25 +605,13 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.WHITE_BED ||
                     event.getClickedBlock().getType() == Material.YELLOW_BED
             ) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_BED_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_BED_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_BED_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
             }
             if (event.getClickedBlock().getType() == Material.BREWING_STAND) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_BREWING_STAND_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_BREWING_STAND_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_BREWING_STAND_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -744,13 +624,7 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.SMITHING_TABLE ||
                     event.getClickedBlock().getType() == Material.STONECUTTER
             ) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_CRAFTERS_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_CRAFTERS_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_CRAFTERS_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -776,37 +650,19 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.CRIMSON_DOOR ||
                     event.getClickedBlock().getType() == Material.CRIMSON_TRAPDOOR
             ) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_DOORS_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_DOORS_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_DOORS_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
             }
             if (event.getClickedBlock().getType() == Material.ENCHANTING_TABLE) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_ENCHANTING_TABLE_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ENCHANTING_TABLE_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_ENCHANTING_TABLE_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
             }
             if (event.getClickedBlock().getType() == Material.ENDER_CHEST) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_ENDER_CHEST_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ENDER_CHEST_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_ENDER_CHEST_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -821,13 +677,7 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.WARPED_FENCE_GATE ||
                     event.getClickedBlock().getType() == Material.CRIMSON_FENCE_GATE
             ) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_FENCE_GATES_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_FENCE_GATES_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_FENCE_GATES_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -836,25 +686,13 @@ public class PlotListener implements Listener {
                     event.getClickedBlock().getType() == Material.BLAST_FURNACE ||
                     event.getClickedBlock().getType() == Material.SMOKER
             ) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_FURNACES_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_FURNACES_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_FURNACES_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
             }
             if (event.getClickedBlock().getType() == Material.JUKEBOX) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_JUKEBOX_USE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_JUKEBOX_USE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_JUKEBOX_USE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -865,13 +703,7 @@ public class PlotListener implements Listener {
             if (event.getClickedBlock() == null) return;
 
             if (event.getClickedBlock().getType() == Material.ITEM_FRAME) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_ITEM_FRAME_ROTATE.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ITEM_FRAME_ROTATE.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_ITEM_FRAME_ROTATE.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -881,37 +713,19 @@ public class PlotListener implements Listener {
         if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
             if (event.getClickedBlock() == null) return;
             if (event.getClickedBlock().getType() == Material.ITEM_FRAME) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_ITEM_FRAME_DESTROY.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ITEM_FRAME_DESTROY.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_ITEM_FRAME_DESTROY.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
             }
             if (event.getClickedBlock().getType() == Material.ARMOR_STAND) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_ARMOR_STAND_DESTROY.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ARMOR_STAND_DESTROY.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_ARMOR_STAND_DESTROY.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
             }
             if (event.getClickedBlock().getType() == Material.PAINTING) {
-                if (role.getIdentifier().equals("owner")) return;
-
-                boolean can = false;
-                if (role.hasFlag(PlotFlagIdentifiers.CAN_PAINTING_DESTROY.getIdentifier())) {
-                    can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_PAINTING_DESTROY.getIdentifier()).getValue());
-                }
-                if (! can) {
+                if (shouldCancel(player, PlotFlagIdentifiers.CAN_PAINTING_DESTROY.getIdentifier())) {
                     event.setCancelled(true);
                     return;
                 }
@@ -941,31 +755,19 @@ public class PlotListener implements Listener {
                 }
 
                 if (event.getEntity() instanceof ItemFrame) {
-                    boolean can = false;
-                    if (role.hasFlag(PlotFlagIdentifiers.CAN_ITEM_FRAME_DESTROY.getIdentifier())) {
-                        can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ITEM_FRAME_DESTROY.getIdentifier()).getValue());
-                    }
-                    if (! can) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_ITEM_FRAME_DESTROY.getIdentifier())) {
                         event.setCancelled(true);
                         return;
                     }
                 }
                 if (event.getEntity() instanceof ArmorStand) {
-                    boolean can = false;
-                    if (role.hasFlag(PlotFlagIdentifiers.CAN_ARMOR_STAND_DESTROY.getIdentifier())) {
-                        can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_ARMOR_STAND_DESTROY.getIdentifier()).getValue());
-                    }
-                    if (! can) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_ARMOR_STAND_DESTROY.getIdentifier())) {
                         event.setCancelled(true);
                         return;
                     }
                 }
                 if (event.getEntity() instanceof Painting) {
-                    boolean can = false;
-                    if (role.hasFlag(PlotFlagIdentifiers.CAN_PAINTING_DESTROY.getIdentifier())) {
-                        can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_PAINTING_DESTROY.getIdentifier()).getValue());
-                    }
-                    if (! can) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_PAINTING_DESTROY.getIdentifier())) {
                         event.setCancelled(true);
                         return;
                     }
@@ -973,11 +775,7 @@ public class PlotListener implements Listener {
 
                 // Also check if it hits another player.
                 if (event.getEntity() instanceof Player) {
-                    boolean can = false;
-                    if (role.hasFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_GIVE.getIdentifier())) {
-                        can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_GIVE.getIdentifier()).getValue());
-                    }
-                    if (! can) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_GIVE.getIdentifier())) {
                         event.setCancelled(true);
                         return;
                     }
@@ -990,11 +788,7 @@ public class PlotListener implements Listener {
                         return;
                     }
 
-                    boolean canHit = false;
-                    if (hitRole.hasFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_TAKE.getIdentifier())) {
-                        canHit = Boolean.parseBoolean(hitRole.getFlag(PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_TAKE.getIdentifier()).getValue());
-                    }
-                    if (! canHit) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_PLAYER_DAMAGE_TAKE.getIdentifier())) {
                         event.setCancelled(true);
                         return;
                     }
@@ -1002,11 +796,7 @@ public class PlotListener implements Listener {
 
                 // Check if it hits a mob.
                 if (event.getEntity() instanceof LivingEntity) {
-                    boolean can = false;
-                    if (role.hasFlag(PlotFlagIdentifiers.CAN_MOB_DAMAGE.getIdentifier())) {
-                        can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_MOB_DAMAGE.getIdentifier()).getValue());
-                    }
-                    if (! can) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_MOB_DAMAGE.getIdentifier())) {
                         event.setCancelled(true);
                         return;
                     }
@@ -1014,11 +804,7 @@ public class PlotListener implements Listener {
 
                 // Check if it hits a vehicle.
                 if (event.getEntity() instanceof Vehicle) {
-                    boolean can = false;
-                    if (role.hasFlag(PlotFlagIdentifiers.CAN_VEHICLE_DESTROY.getIdentifier())) {
-                        can = Boolean.parseBoolean(role.getFlag(PlotFlagIdentifiers.CAN_VEHICLE_DESTROY.getIdentifier()).getValue());
-                    }
-                    if (! can) {
+                    if (shouldCancel(player, PlotFlagIdentifiers.CAN_VEHICLE_DESTROY.getIdentifier())) {
                         event.setCancelled(true);
                         return;
                     }

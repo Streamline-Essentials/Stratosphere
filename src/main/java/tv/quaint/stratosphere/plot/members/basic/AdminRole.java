@@ -10,12 +10,9 @@ public class AdminRole extends PlotRole {
     public AdminRole(SkyblockPlot plot) {
         super("admin", "Admin", plot);
 
-        for (PlotFlagIdentifiers identifier : PlotFlagIdentifiers.values()) {
-            if (! identifier.getType().equals(PlotFlagType.PLAYER)) return;
-            if (identifier == PlotFlagIdentifiers.PERMISSION_EDIT) return;
-
-            addFlag(new PlotFlag(identifier.getIdentifier(), true));
-        }
+        addFlag(new PlotFlag(PlotFlagIdentifiers.ADMIN.getIdentifier(), true));
+        addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_PET_DAMAGE.getIdentifier(), true));
+        addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_VILLAGER_DAMAGE.getIdentifier(), true));
 
         addFlag(new PlotFlag(PlotFlagIdentifiers.PARENT.getIdentifier(), "member"));
     }

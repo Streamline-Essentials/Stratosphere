@@ -1,4 +1,4 @@
-package tv.quaint.stratosphere.timers;
+package tv.quaint.stratosphere.plot.timers;
 
 import net.streamline.api.scheduler.ModuleRunnable;
 import tv.quaint.stratosphere.Stratosphere;
@@ -14,7 +14,10 @@ public class PlotKeepAliveTicker extends ModuleRunnable {
         PlotUtils.getPlots().forEach(plot -> {
             plot.updateWorldBorder();
 
-            // more stuff
+            if (! plot.hasMemberOnline()) {
+                plot.saveAll();
+                plot.unload();
+            }
         });
     }
 }

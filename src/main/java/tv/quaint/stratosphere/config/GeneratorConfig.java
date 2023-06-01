@@ -16,16 +16,38 @@ public class GeneratorConfig extends SimpleConfiguration {
     private ConcurrentSkipListSet<ConfiguredGenerator> loadedGenerators;
 
     public GeneratorConfig() {
-        super("config.yml", Stratosphere.getInstance(), false);
+        super("generators.yml", Stratosphere.getInstance(), false);
 
         reloadTheConfig();
     }
 
     public static void initialize() {
         // Set up default generator.
-        ConfiguredGenerator def = new ConfiguredGenerator("default", 1);
-        def.save();
-        def.load();
+        if (Stratosphere.getGeneratorConfig().getGenerator("1") == null) {
+            ConfiguredGenerator def = new ConfiguredGenerator("1", 1);
+            def.save();
+            def.load();
+        }
+        if (Stratosphere.getGeneratorConfig().getGenerator("2") == null) {
+            ConfiguredGenerator def = new ConfiguredGenerator("2", 2, ConfiguredGenerator.getDefaultGenerator2());
+            def.save();
+            def.load();
+        }
+        if (Stratosphere.getGeneratorConfig().getGenerator("3") == null) {
+            ConfiguredGenerator def = new ConfiguredGenerator("3", 3, ConfiguredGenerator.getDefaultGenerator3());
+            def.save();
+            def.load();
+        }
+        if (Stratosphere.getGeneratorConfig().getGenerator("4") == null) {
+            ConfiguredGenerator def = new ConfiguredGenerator("4", 4, ConfiguredGenerator.getDefaultGenerator4());
+            def.save();
+            def.load();
+        }
+        if (Stratosphere.getGeneratorConfig().getGenerator("5") == null) {
+            ConfiguredGenerator def = new ConfiguredGenerator("5", 5, ConfiguredGenerator.getDefaultGenerator5());
+            def.save();
+            def.load();
+        }
     }
 
     @Override
@@ -102,5 +124,33 @@ public class GeneratorConfig extends SimpleConfiguration {
         configuredGenerator.getMaterials().forEach((material, chance) -> {
             write(configuredGenerator.getIdentifier() + ".materials." + material.name(), chance);
         });
+    }
+
+    public ConfiguredGenerator getByTierAbsolute(int tier) {
+        AtomicReference<ConfiguredGenerator> generator = new AtomicReference<>();
+
+        getLoadedGenerators().forEach(gen -> {
+            if (gen.getTier() == tier) {
+                generator.set(gen);
+            }
+        });
+
+        return generator.get();
+    }
+
+    public boolean isTierLoaded(int tier) {
+        return getByTierAbsolute(tier) != null;
+    }
+
+
+    public ConfiguredGenerator getByTier(int tier) {
+        ConfiguredGenerator generator = getByTierAbsolute(tier);
+
+        while (generator == null && tier > 0) {
+            tier --;
+            generator = getByTierAbsolute(tier);
+        }
+
+        return generator;
     }
 }
