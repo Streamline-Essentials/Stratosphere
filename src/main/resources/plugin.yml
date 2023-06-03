@@ -1,3 +1,13 @@
-name: SkyHigh
+name: Stratosphere
 version: '${project.version}'
-main: tv.quaint.skyhigh.SkyHigh
+main: tv.quaint.stratosphere.Stratosphere
+author: Quaintified
+description: Play Minecraft, but in the sky!
+api-version: 1.19
+
+commands:
+  island:
+    description: Main island command.
+    permission: stratosphere.command.island.default
+    aliases:
+      - is

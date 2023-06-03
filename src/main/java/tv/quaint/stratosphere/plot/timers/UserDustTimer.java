@@ -1,13 +1,17 @@
 package tv.quaint.stratosphere.plot.timers;
 
-import net.streamline.apib.SLAPIB;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Bukkit;
+import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
-import tv.quaint.stratosphere.users.SkyblockUser;
 
 public class UserDustTimer implements Runnable {
+    @Getter @Setter
+    private int taskId;
+
     public UserDustTimer() {
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(SLAPIB.getPlugin(), this, 0L, 20L * 60L);
+        taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(Stratosphere.getInstance(), this, 0, 20 * 60);
     }
 
     @Override
@@ -16,9 +20,13 @@ public class UserDustTimer implements Runnable {
             if (user != null) {
                 if (user.isAlreadyInPlot()) {
                     user.addStarDust(5);
-                    user.getStreamlineUser().sendMessage("&bYou have gained &f5 &dStar Dust &bfor being a member of an island!");
+                    user.sendMessage("&bYou have gained &f5 &dStar Dust &bfor being a member of an island!");
                 }
             }
         });
+    }
+
+    public void cancel() {
+        Bukkit.getScheduler().cancelTask(taskId);
     }
 }

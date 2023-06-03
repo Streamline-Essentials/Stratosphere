@@ -1,14 +1,17 @@
 package tv.quaint.stratosphere.plot.timers;
 
-import net.streamline.apib.SLAPIB;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Bukkit;
-import org.bukkit.World;
+import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
-import tv.quaint.stratosphere.world.SkyblockIOBus;
 
 public class PlotXPTimer implements Runnable {
+    @Getter @Setter
+    private int taskId;
+
     public PlotXPTimer() {
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(SLAPIB.getPlugin(), this, 0L, 20L * 60L * 5L);
+        taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(Stratosphere.getInstance(), this, 0, 20 * 60 * 5);
     }
 
     @Override
@@ -19,5 +22,9 @@ public class PlotXPTimer implements Runnable {
                 plot.messageMembers("&bYou have gained &f10 &dXP &bfor players being in your island!");
             }
         });
+    }
+
+    public void cancel() {
+        Bukkit.getScheduler().cancelTask(taskId);
     }
 }

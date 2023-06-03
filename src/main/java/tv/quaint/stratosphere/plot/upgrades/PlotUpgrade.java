@@ -2,7 +2,7 @@ package tv.quaint.stratosphere.plot.upgrades;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.registries.Identifiable;
+import tv.quaint.objects.Identifiable;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
@@ -56,12 +56,10 @@ public class PlotUpgrade implements Identifiable {
         if (tier < MIN_TIER) {
             throw new IllegalArgumentException("Tier must be greater than or equal to " + MIN_TIER);
         }
-
-        PlotUtils.getUpgradeRegistry().register(this);
     }
 
     public PlotUpgrade(String identifier, UpgradeType type, String payload, double dustCost, String description) {
-        this(identifier, type, PlotUtils.getUpgradeRegistry().getNextTier(type), payload, dustCost, description);
+        this(identifier, type, PlotUtils.getNextUpgradeTier(type), payload, dustCost, description);
     }
 
     public double getDouble() {

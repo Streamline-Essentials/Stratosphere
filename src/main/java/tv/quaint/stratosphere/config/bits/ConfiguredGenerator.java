@@ -2,8 +2,8 @@ package tv.quaint.stratosphere.config.bits;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.registries.Identifiable;
 import org.bukkit.Material;
+import tv.quaint.objects.Identifiable;
 import tv.quaint.stratosphere.Stratosphere;
 
 import java.util.Random;

@@ -2,10 +2,10 @@ package tv.quaint.stratosphere;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.modules.SimpleModule;
-import net.streamline.apib.SLAPIB;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.plugin.java.JavaPlugin;
+import tv.quaint.objects.handling.derived.IPluginEventable;
 import tv.quaint.stratosphere.commands.IslandCommand;
 import tv.quaint.stratosphere.config.*;
 import tv.quaint.stratosphere.plot.PlotUtils;
@@ -17,11 +17,8 @@ import tv.quaint.stratosphere.plot.timers.PlotXPTimer;
 import tv.quaint.stratosphere.plot.timers.UserDustTimer;
 import tv.quaint.stratosphere.plot.timers.PlotKeepAliveTicker;
 import tv.quaint.stratosphere.users.SkyblockUser;
-import tv.quaint.thebase.lib.pf4j.PluginWrapper;
 
-import java.util.List;
-
-public class Stratosphere extends SimpleModule {
+public class Stratosphere extends JavaPlugin implements IPluginEventable {
     @Getter @Setter
     private static Stratosphere instance;
     @Getter @Setter
@@ -45,15 +42,15 @@ public class Stratosphere extends SimpleModule {
     @Getter @Setter
     private static UserDustTimer userDustTimer;
 
-    public Stratosphere(PluginWrapper wrapper) {
-        super(wrapper);
-    }
+    @Getter @Setter
+    private static IslandCommand islandCommand;
+
+    @Getter @Setter
+    private String identifier;
 
     @Override
-    public void registerCommands() {
-        setCommands(List.of(
-                new IslandCommand()
-        ));
+    public void onLoad() {
+        identifier = "Stratosphere";
     }
 
     @Override
@@ -70,15 +67,17 @@ public class Stratosphere extends SimpleModule {
         upgradeConfig = new UpgradeConfig();
         topConfig = new TopConfig();
 
-        Bukkit.getPluginManager().registerEvents(new PlotListener(), SLAPIB.getPlugin());
-        Bukkit.getPluginManager().registerEvents(new BukkitListener(), SLAPIB.getPlugin());
+        Bukkit.getPluginManager().registerEvents(new PlotListener(), this);
+        Bukkit.getPluginManager().registerEvents(new BukkitListener(), this);
         if (Bukkit.getPluginManager().getPlugin("Slimefun") != null)
-            Bukkit.getPluginManager().registerEvents(new SlimeFunListener(), SLAPIB.getPlugin());
+            Bukkit.getPluginManager().registerEvents(new SlimeFunListener(), this);
 
         plotKeepAliveTicker = new PlotKeepAliveTicker();
 
         plotXPTimer = new PlotXPTimer();
         userDustTimer = new UserDustTimer();
+
+        islandCommand = new IslandCommand();
     }
 
     @Override

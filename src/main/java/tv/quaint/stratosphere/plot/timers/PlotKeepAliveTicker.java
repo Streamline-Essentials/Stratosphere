@@ -1,12 +1,17 @@
 package tv.quaint.stratosphere.plot.timers;
 
-import net.streamline.api.scheduler.ModuleRunnable;
+import lombok.Getter;
+import lombok.Setter;
+import org.bukkit.Bukkit;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
 
-public class PlotKeepAliveTicker extends ModuleRunnable {
+public class PlotKeepAliveTicker implements Runnable {
+    @Getter @Setter
+    private int taskId;
+
     public PlotKeepAliveTicker() {
-        super(Stratosphere.getInstance(), 0, 5);
+        taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(Stratosphere.getInstance(), this, 0, 5);
     }
 
     @Override
@@ -19,5 +24,9 @@ public class PlotKeepAliveTicker extends ModuleRunnable {
                 plot.unload();
             }
         });
+    }
+
+    public void cancel() {
+        Bukkit.getScheduler().cancelTask(taskId);
     }
 }

@@ -2,13 +2,10 @@ package tv.quaint.stratosphere.plot.quests.bits;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.bukkit.entity.LightningStrike;
 import org.bukkit.entity.Player;
 import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
 import tv.quaint.stratosphere.users.SkyblockUser;
-
-import java.util.List;
 
 public class QuestReward {
     public enum RewardType {
@@ -73,8 +70,8 @@ public class QuestReward {
         switch (type) {
             case DUST:
                 plot.getMembers().forEach(plotMember -> {
-                    plotMember.getSkyblockUser().addStarDust(getDouble());
-                    plotMember.getSkyblockUser().saveAll();
+                    plotMember.getUser().addStarDust(getDouble());
+                    plotMember.getUser().saveAll();
                 });
                 plot.saveAll();
                 break;
@@ -98,7 +95,7 @@ public class QuestReward {
                 finisher.getServer().dispatchCommand(finisher.getServer().getConsoleSender(), payload);
                 break;
             case MESSAGE:
-                user.getStreamlineUser().sendMessage(payload);
+                user.sendMessage(payload);
                 break;
         }
 

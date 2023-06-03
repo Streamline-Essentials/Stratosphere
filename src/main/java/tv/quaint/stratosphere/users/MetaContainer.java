@@ -2,7 +2,7 @@ package tv.quaint.stratosphere.users;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.registries.Identifiable;
+import tv.quaint.objects.Identifiable;
 
 public class MetaContainer implements Identifiable, SelfDatalizable<MetaContainer> {
     @Getter @Setter

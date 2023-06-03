@@ -1,26 +1,20 @@
 package tv.quaint.stratosphere.plot.events;
 
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockFormEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
-import org.bukkit.event.world.ChunkPopulateEvent;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.config.bits.ConfiguredGenerator;
 import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
-import tv.quaint.stratosphere.plot.quests.PlotQuest;
 import tv.quaint.stratosphere.users.SkyblockUser;
 
 import java.util.Objects;

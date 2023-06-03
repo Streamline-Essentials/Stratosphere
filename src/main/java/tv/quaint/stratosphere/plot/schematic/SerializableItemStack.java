@@ -1,8 +1,8 @@
 package tv.quaint.stratosphere.plot.schematic;
 
+import tv.quaint.stratosphere.utils.MessageUtils;
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.utils.MessageUtils;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;

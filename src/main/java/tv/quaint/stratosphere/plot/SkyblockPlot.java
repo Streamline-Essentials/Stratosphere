@@ -14,10 +14,8 @@ import com.sk89q.worldedit.session.ClipboardHolder;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
-import net.streamline.api.modules.ModuleUtils;
-import net.streamline.api.savables.SavableResource;
-import net.streamline.api.savables.users.StreamlineUser;
-import net.streamline.apib.SLAPIB;
+import org.bukkit.scheduler.BukkitTask;
+import tv.quaint.savables.SavableResource;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -40,6 +38,7 @@ import tv.quaint.stratosphere.plot.schematic.tree.SchemTree;
 import tv.quaint.stratosphere.plot.upgrades.AchievedUpgrade;
 import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
 import tv.quaint.stratosphere.users.SkyblockUser;
+import tv.quaint.stratosphere.utils.MessageUtils;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
 
 import java.io.File;
@@ -138,7 +137,7 @@ public class SkyblockPlot extends SavableResource {
     @Getter @Setter
     private boolean lastTickPlayersWereOn;
     @Getter
-    private final int taskId;
+    private final BukkitTask task;
     @Getter @Setter
     private ConcurrentSkipListMap<Long, Player> cachedPlayerUpgradeRequests = new ConcurrentSkipListMap<>();
 
@@ -153,7 +152,7 @@ public class SkyblockPlot extends SavableResource {
     private SkyblockPlot(String instantiator, boolean newPlot) {
         super(instantiator, new PlotSerializer(instantiator));
 
-        taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SLAPIB.getPlugin(), this::tick, 1L, 20L);
+        task = Bukkit.getScheduler().runTaskTimer(Stratosphere.getInstance(), this::tick, 1, 20);
     }
 
     public SkyblockPlot(String instantiator, SchemTree schemTree, @NonNull Location locationalOffset) {
@@ -228,10 +227,9 @@ public class SkyblockPlot extends SavableResource {
         List<String> achievedUpgradesStrings = getOrSetDefault("achieved-upgrades", new ArrayList<>());
         achievedUpgradesStrings.forEach(achievedUpgradeString -> {
             try {
-                String[] split = achievedUpgradeString.split(":");
-                String upgradeName = split[0];
-                int level = Integer.parseInt(split[1]);
-                AchievedUpgrade achievedUpgrade = new AchievedUpgrade(upgradeName, level);
+                PlotUpgrade upgrade = Stratosphere.getUpgradeConfig().getUpgrade(achievedUpgradeString);
+                if (upgrade == null) return;
+                AchievedUpgrade achievedUpgrade = new AchievedUpgrade(this, upgrade);
                 achievedUpgrades.add(achievedUpgrade);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -282,7 +280,7 @@ public class SkyblockPlot extends SavableResource {
     }
 
     public void setupWorld(String instantiator, SchemTree tree) {
-        Stratosphere.getInstance().logDebug("About to setup world for " + instantiator);
+        MessageUtils.logDebug("About to setup world for " + instantiator);
 
         SpawnPos spawnPos = new SpawnPos(this, getLocationalOffset().getBlockX(), 150, getLocationalOffset().getBlockZ(), 0, 0);
         savedLocations = new ConcurrentSkipListSet<>();
@@ -294,12 +292,12 @@ public class SkyblockPlot extends SavableResource {
         spawnRateIndex = 1;
     }
 
-    public StreamlineUser getInstantiatorAsUser() {
-        return ModuleUtils.getOrGetUser(instantiator);
+    public SkyblockUser getInstantiatorAsUser() {
+        return PlotUtils.getOrGetUser(instantiator);
     }
 
-    public StreamlineUser getOwnerAsUser() {
-        return ModuleUtils.getOrGetUser(ownerUuid.toString());
+    public SkyblockUser getOwnerAsUser() {
+        return PlotUtils.getOrGetUser(ownerUuid.toString());
     }
 
     @Override
@@ -471,7 +469,7 @@ public class SkyblockPlot extends SavableResource {
         getAchievedUpgrades().forEach(achievedUpgrade1 -> {
             if (achievedUpgrade.get() != null) return;
 
-            if (achievedUpgrade1.getType().equals(upgradeName)) {
+            if (achievedUpgrade1.getUpgrade().getType().equals(upgradeName)) {
                 achievedUpgrade.set(achievedUpgrade1);
             }
         });
@@ -486,49 +484,26 @@ public class SkyblockPlot extends SavableResource {
         return getAchievedUpgrade(upgradeName) != null;
     }
 
-    public void setTier(String upgradeName, int tier) {
-        AchievedUpgrade upgrade = getAchievedUpgrade(upgradeName);
-        if (upgrade == null) {
-            upgrade = new AchievedUpgrade(upgradeName, tier);
-            addAchievedUpgrade(upgrade);
-        } else {
-            upgrade.setTier(tier);
-        }
+    public int getUpgradedTier(PlotUpgrade.UpgradeType upgradeType) {
+        AtomicReference<Integer> tier = new AtomicReference<>(0);
+        getAchievedUpgrades().forEach(achievedUpgrade -> {
+            if (achievedUpgrade.getUpgrade().getType().equals(upgradeType)) {
+                tier.set(achievedUpgrade.getUpgrade().getTier());
+            }
+        });
+        return tier.get();
     }
 
-    public void setTier(PlotUpgrade.UpgradeType upgradeName, int tier) {
-        setTier(upgradeName.toString(), tier);
-    }
-
-    public void increaseTier(String upgradeName, int amount) {
-        setTier(upgradeName, getTier(upgradeName) + amount);
-    }
-
-    public void increaseTier(PlotUpgrade.UpgradeType upgradeName, int amount) {
-        increaseTier(upgradeName.toString(), amount);
-    }
-
-    public void decreaseTier(String upgradeName, int amount) {
-        setTier(upgradeName, getTier(upgradeName) - amount);
-    }
-
-    public void decreaseTier(PlotUpgrade.UpgradeType upgradeName, int amount) {
-        decreaseTier(upgradeName.toString(), amount);
-    }
-
-    public int getTier(String upgradeName) {
-        AchievedUpgrade upgrade = getAchievedUpgrade(upgradeName);
-        return upgrade == null ? PlotUpgrade.MIN_TIER - 1 : upgrade.getTier();
-    }
-
-    public int getTier(PlotUpgrade.UpgradeType upgradeName) {
-        return getTier(upgradeName.toString());
+    public boolean canPurchaseUpgrade(PlotUpgrade upgrade) {
+        if (upgrade == null) return false;
+        int tier = getUpgradedTier(upgrade.getType());
+        return tier == upgrade.getTier() - 1;
     }
 
     private List<String> getAchievedUpgradesAsStrings() {
         List<String> achievedUpgradesStrings = new ArrayList<>();
         getAchievedUpgrades().forEach(achievedUpgrade -> {
-            achievedUpgradesStrings.add(achievedUpgrade.getIdentifier() + ":" + achievedUpgrade.getTier());
+            achievedUpgradesStrings.add(achievedUpgrade.getUpgrade().getIdentifier());
         });
         return achievedUpgradesStrings;
     }
@@ -545,12 +520,12 @@ public class SkyblockPlot extends SavableResource {
         return savedLocation.get();
     }
 
-    public StreamlineUser getOwner() {
-        return ModuleUtils.getOrGetUser(getOwnerUuid().toString());
+    public SkyblockUser getOwner() {
+        return PlotUtils.getOrGetUser(getOwnerUuid().toString());
     }
 
     public String getOwnerName() {
-        StreamlineUser owner = getOwner();
+        SkyblockUser owner = getOwner();
         return owner == null ? "Unknown" : owner.getName();
     }
 
@@ -905,16 +880,16 @@ public class SkyblockPlot extends SavableResource {
 
     public void addMember(PlotMember member) {
         members.add(member);
-        member.getSkyblockUser().setPlotUuid(this.getUuid());
-        member.getSkyblockUser().saveAll();
+        member.getUser().setPlotUuid(this.getUuid());
+        member.getUser().saveAll();
 
-        messageMembers("&a" + member.getSkyblockUser().getUsername() + " &7has joined the plot.");
+        messageMembers("&a" + member.getUser().getUsername() + " &7has joined the plot.");
     }
 
     public void removeMember(PlotMember member) {
         members.remove(member);
-        member.getSkyblockUser().setPlotUuid("");
-        member.getSkyblockUser().saveAll();
+        member.getUser().setPlotUuid("");
+        member.getUser().saveAll();
     }
 
     public boolean isMember(String uuid) {
@@ -975,13 +950,13 @@ public class SkyblockPlot extends SavableResource {
     }
 
     public void delete() {
-        Bukkit.getScheduler().cancelTask(this.taskId);
+        task.cancel();
 
         kickToSpawn();
 
         getMembers().forEach(plotMember -> {
-            plotMember.getSkyblockUser().setPlotUuid("");
-            plotMember.getSkyblockUser().saveAll();
+            plotMember.getUser().setPlotUuid("");
+            plotMember.getUser().saveAll();
         });
 
 //        this.skyWorld.delete();
@@ -1003,7 +978,7 @@ public class SkyblockPlot extends SavableResource {
 
     public void broadcastWorld(String message) {
         getPlayersInsideByName().forEach((s, player) -> {
-            StreamlineUser user = ModuleUtils.getOrGetPlayer(player.getUniqueId().toString());
+            SkyblockUser user = PlotUtils.getOrGetUser(player.getUniqueId().toString());
             if (user != null) user.sendMessage(message);
         });
     }
@@ -1034,7 +1009,7 @@ public class SkyblockPlot extends SavableResource {
         getInvitedUsers().removeIf(user -> user.getUuid().equals(uuid));
     }
 
-    public void invite(StreamlineUser user, StreamlineUser sender) {
+    public void invite(SkyblockUser user, SkyblockUser sender) {
         if (! user.isOnline()) return;
 
         if (user.getUuid().equals(sender.getUuid())) {
@@ -1051,10 +1026,7 @@ public class SkyblockPlot extends SavableResource {
             return;
         }
 
-        SkyblockUser skyblockUser = SkyblockUser.transpose(user);
-        SkyblockUser skyblockSender = SkyblockUser.transpose(sender);
-
-        if (skyblockUser.isAlreadyInPlot()) {
+        if (user.isAlreadyInPlot()) {
             sender.sendMessage("&cThat user is already in an island.");
             return;
         }
@@ -1069,23 +1041,21 @@ public class SkyblockPlot extends SavableResource {
             return;
         }
 
-        invitedUsers.add(skyblockUser);
+        invitedUsers.add(user);
 
         user.sendMessage("&eYou have been invited to join &c" + getOwnerName() + "&e's island.");
         user.sendMessage("&eType &b/island accept " + getOwnerName() + " &eto join.");
 
-        ModuleUtils.sendMessage(sender, "&aInvited &b" + user.getDisplayName() + " &ato your plot!");
+        sender.sendMessage("&aInvited &b" + user.getDisplayName() + " &ato your plot!");
     }
 
-    public void acceptInvite(StreamlineUser accepter) {
-        SkyblockUser skyblockUser = SkyblockUser.transpose(accepter);
-
+    public void acceptInvite(SkyblockUser accepter) {
         if (! isInvited(accepter.getUuid())) {
             accepter.sendMessage("&cYou have not been invited to this island.");
             return;
         }
 
-        if (skyblockUser.isAlreadyInPlot()) {
+        if (accepter.isAlreadyInPlot()) {
             accepter.sendMessage("&cYou are already in an island.");
             removeInvited(accepter.getUuid());
             return;
@@ -1099,21 +1069,19 @@ public class SkyblockPlot extends SavableResource {
 
         PlotRole role = getMemberRole();
 
-        addMember(new PlotMember(UUID.fromString(skyblockUser.getUuid()), role));
+        addMember(new PlotMember(UUID.fromString(accepter.getUuid()), role));
 
         accepter.sendMessage("&eYou have joined &c" + getOwnerName() + "&e's island.");
         messageMembers("&c" + accepter.getName() + " &ehas joined the island.");
     }
 
-    public void denyInvite(StreamlineUser denier) {
-        SkyblockUser skyblockUser = SkyblockUser.transpose(denier);
-
+    public void denyInvite(SkyblockUser denier) {
         if (! isInvited(denier.getUuid())) {
             denier.sendMessage("&cYou have not been invited to this island.");
             return;
         }
 
-        if (skyblockUser.isAlreadyInPlot()) {
+        if (denier.isAlreadyInPlot()) {
             denier.sendMessage("&cYou are already in an island.");
             removeInvited(denier.getUuid());
             return;
@@ -1129,16 +1097,13 @@ public class SkyblockPlot extends SavableResource {
         denier.sendMessage("&eYou have denied the invite to &c" + getOwnerName() + "&e's island.");
     }
 
-    public void promoteUser(StreamlineUser promoted, StreamlineUser sender) {
+    public void promoteUser(SkyblockUser promoted, SkyblockUser sender) {
         if (promoted.getUuid().equals(sender.getUuid())) {
             sender.sendMessage("&cYou cannot invite yourself.");
             return;
         }
 
-        SkyblockUser skyblockUser = SkyblockUser.transpose(promoted);
-        SkyblockUser skyblockSender = SkyblockUser.transpose(sender);
-
-        PlotMember plotSender = getMember(skyblockSender.getUuid());
+        PlotMember plotSender = getMember(sender.getUuid());
 
         if (! isMember(promoted.getUuid())) {
             sender.sendMessage("&cThat user is not a member of this island.");
@@ -1168,16 +1133,13 @@ public class SkyblockPlot extends SavableResource {
         }
     }
 
-    public void demoteUser(StreamlineUser demoted, StreamlineUser sender) {
+    public void demoteUser(SkyblockUser demoted, SkyblockUser sender) {
         if (demoted.getUuid().equals(sender.getUuid())) {
             sender.sendMessage("&cYou cannot invite yourself.");
             return;
         }
 
-        SkyblockUser skyblockUser = SkyblockUser.transpose(demoted);
-        SkyblockUser skyblockSender = SkyblockUser.transpose(sender);
-
-        PlotMember plotSender = getMember(skyblockSender.getUuid());
+        PlotMember plotSender = getMember(sender.getUuid());
 
         if (! isMember(demoted.getUuid())) {
             sender.sendMessage("&cThat user is not a member of this island.");
@@ -1207,16 +1169,13 @@ public class SkyblockPlot extends SavableResource {
         }
     }
 
-    public void transferOwnership(StreamlineUser newOwner, StreamlineUser sender) {
+    public void transferOwnership(SkyblockUser newOwner, SkyblockUser sender) {
         if (newOwner.getUuid().equals(sender.getUuid())) {
             sender.sendMessage("&cYou cannot transfer ownership to yourself.");
             return;
         }
 
-        SkyblockUser skyblockUser = SkyblockUser.transpose(newOwner);
-        SkyblockUser skyblockSender = SkyblockUser.transpose(sender);
-
-        PlotMember plotSender = getMember(skyblockSender.getUuid());
+        PlotMember plotSender = getMember(sender.getUuid());
 
         if (! isMember(newOwner.getUuid())) {
             sender.sendMessage("&cThat user is not a member of this island.");
@@ -1238,25 +1197,22 @@ public class SkyblockPlot extends SavableResource {
         member.setRole(getOwnerRole());
         plotSender.setRole(getAdminRole());
 
-        setOwnerUuid(UUID.fromString(skyblockUser.getUuid()));
+        setOwnerUuid(UUID.fromString(newOwner.getUuid()));
 
-        skyblockUser.setPlotUuid(getUuid());
-        skyblockSender.setPlotUuid(getUuid());
+        newOwner.setPlotUuid(getUuid());
+        sender.setPlotUuid(getUuid());
 
         sender.sendMessage("&eYou have transferred ownership of the island to &c" + newOwner.getName() + "&e.");
         newOwner.sendMessage("&eYou have been promoted to owner by &c" + sender.getName() + "&e.");
     }
 
-    public void kickFromIsland(StreamlineUser toKick, StreamlineUser sender) {
+    public void kickFromIsland(SkyblockUser toKick, SkyblockUser sender) {
         if (toKick.getUuid().equals(sender.getUuid())) {
             sender.sendMessage("&cYou cannot kick yourself.");
             return;
         }
 
-        SkyblockUser skyblockUser = SkyblockUser.transpose(toKick);
-        SkyblockUser skyblockSender = SkyblockUser.transpose(sender);
-
-        PlotMember plotSender = getMember(skyblockSender.getUuid());
+        PlotMember plotSender = getMember(sender.getUuid());
 
         if (! isMember(toKick.getUuid())) {
             sender.sendMessage("&cThat user is not a member of this island.");
@@ -1287,9 +1243,7 @@ public class SkyblockPlot extends SavableResource {
      * When an owner leaves the island, if it has members, it will deny it; if there are no members, it will delete the island.
      * If there are no members, it will delete the island.
      */
-    public void leaveIsland(StreamlineUser user) {
-        SkyblockUser skyblockUser = SkyblockUser.transpose(user);
-
+    public void leaveIsland(SkyblockUser user) {
         if (! isMember(user.getUuid())) {
             user.sendMessage("&cYou are not a member of this island.");
             return;
@@ -1332,7 +1286,7 @@ public class SkyblockPlot extends SavableResource {
     public String getInvitedNames() {
         StringBuilder builder = new StringBuilder();
 
-        getInvitedUsers().forEach(invite -> builder.append("&b").append(invite.getStreamlineUser().getName()).append("&8, "));
+        getInvitedUsers().forEach(invite -> builder.append("&b").append(invite.getName()).append("&8, "));
         if (builder.toString().endsWith("&8, "))
             builder.delete(builder.length() - 4, builder.length() - 1);
 
@@ -1595,7 +1549,7 @@ public class SkyblockPlot extends SavableResource {
         AtomicInteger count = new AtomicInteger(0);
 
         getMembers().forEach(member -> {
-            int questsDone = member.getSkyblockUser().getCompletedQuestsAsQuests().size();
+            int questsDone = member.getUser().getCompletedQuestsAsQuests().size();
             count.addAndGet(questsDone);
         });
 
@@ -1644,7 +1598,7 @@ public class SkyblockPlot extends SavableResource {
         if (! isMember(sender)) return;
         if (! isOwner(sender)) return;
 
-        StreamlineUser user = ModuleUtils.getOrGetUser(sender.getUniqueId().toString());
+        SkyblockUser user = PlotUtils.getOrGetUser(sender.getUniqueId().toString());
 
         if (getPlotType() == PlotType.MULTI) {
             user.sendMessage("&cYour plot is already the maximum type.");

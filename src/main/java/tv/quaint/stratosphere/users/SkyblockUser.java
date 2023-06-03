@@ -1,13 +1,12 @@
 package tv.quaint.stratosphere.users;
 
+import tv.quaint.stratosphere.utils.MessageUtils;
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.modules.ModuleUtils;
-import net.streamline.api.savables.SavableResource;
-import net.streamline.api.savables.users.StreamlineUser;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.EntityType;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import tv.quaint.savables.SavableResource;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
@@ -18,7 +17,6 @@ import tv.quaint.storage.documents.SimpleJsonDocument;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class SkyblockUser extends SavableResource {
@@ -54,9 +52,9 @@ public class SkyblockUser extends SavableResource {
     public SkyblockUser(String uuid) {
         super(uuid, new SkyblockUserSerializer(uuid));
 
-        StreamlineUser user = getStreamlineUser();
-        if (user != null) {
-            username = user.getName();
+        OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(uuid));
+        if (player != null) {
+            username = player.getName();
         }
 
         completedQuests = new ArrayList<>();
@@ -115,10 +113,6 @@ public class SkyblockUser extends SavableResource {
         return ! plotUuid.isEmpty() && ! plotUuid.isBlank();
     }
 
-    public StreamlineUser getStreamlineUser() {
-        return ModuleUtils.getOrGetUser(getIdentifier());
-    }
-
     public SkyblockPlot getOrGetPlot() {
         return PlotUtils.getOrGetPlot(plotUuid);
     }
@@ -173,7 +167,28 @@ public class SkyblockUser extends SavableResource {
         return getBukkitPlayer() != null;
     }
 
-    public static SkyblockUser transpose(StreamlineUser user) {
-        return PlotUtils.getOrGetUser(user.getIdentifier());
+    public void sendMessage(String message) {
+        if (! isOnline()) {
+            MessageUtils.logWarning("Tried to send message to offline player: " + getDisplayName());
+            return;
+        }
+
+        MessageUtils.sendMessage(getBukkitPlayer(), message);
+    }
+
+    public String getName() {
+        return username;
+    }
+
+    public String getDisplayName() {
+        if (! isOnline()) return getName();
+
+        return getBukkitPlayer().getDisplayName();
+    }
+
+    public boolean hasPermission(String permission) {
+        if (! isOnline()) return false;
+
+        return getBukkitPlayer().hasPermission(permission);
     }
 }

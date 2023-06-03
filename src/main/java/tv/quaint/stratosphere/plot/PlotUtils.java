@@ -1,9 +1,9 @@
 package tv.quaint.stratosphere.plot;
 
+import tv.quaint.stratosphere.utils.MessageUtils;
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.configs.given.CachedUUIDsHandler;
-import net.streamline.api.savables.users.StreamlineUser;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -11,23 +11,19 @@ import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.config.MetaDataConfig;
 import tv.quaint.stratosphere.plot.quests.QuestContainer;
 import tv.quaint.stratosphere.plot.schematic.tree.SchemTree;
-import tv.quaint.stratosphere.plot.upgrades.UpgradeRegistry;
+import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
 import tv.quaint.stratosphere.users.SkyblockUser;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
 
 import java.io.File;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class PlotUtils {
-    @Getter @Setter
-    private static UpgradeRegistry upgradeRegistry;
-
     public static void initImmediately() {
-        upgradeRegistry = new UpgradeRegistry();
     }
 
     @Getter @Setter
@@ -123,12 +119,12 @@ public class PlotUtils {
         return isPlotLoaded(uuid.toString());
     }
 
-    public static SkyblockPlot createPlot(StreamlineUser owner, String schemTreeName) {
+    public static SkyblockPlot createPlot(SkyblockUser owner, String schemTreeName) {
         owner.sendMessage("&bCreating plot...");
 
         SchemTree schemTree = Stratosphere.getMyConfig().getSchematicTree(schemTreeName);
 
-        Stratosphere.getInstance().logDebug("SchemTreeName: " + schemTreeName);
+        MessageUtils.logDebug("SchemTreeName: " + schemTreeName);
 
         if (schemTree == null) {
             owner.sendMessage("&cSchematic set not found!");
@@ -193,8 +189,8 @@ public class PlotUtils {
 
     public static SkyblockUser getOrGetUser(String mightBeUuid) {
         String uuid = "";
-        if (mightBeUuid.length() == 32 && mightBeUuid.contains("-")) uuid = mightBeUuid;
-        else uuid = CachedUUIDsHandler.getCachedUUID(mightBeUuid);
+        if (mightBeUuid.contains("-")) uuid = mightBeUuid;
+        else uuid = Bukkit.getOfflinePlayer(mightBeUuid).getUniqueId().toString();
 
         if (uuid == null || uuid.isEmpty() || uuid.isBlank()) return null;
 
@@ -265,5 +261,18 @@ public class PlotUtils {
         MetaDataConfig.getQuesters().add(questContainer);
 
         return questContainer;
+    }
+
+    public static int getNextUpgradeTier(PlotUpgrade.UpgradeType type) {
+        AtomicInteger tier = new AtomicInteger(0);
+
+        Stratosphere.getUpgradeConfig().getLoadedUpgrades().forEach(upgrade -> {
+            if (upgrade.getType() != type) return;
+            if (upgrade.getTier() <= tier.get()) return;
+
+            tier.set(upgrade.getTier());
+        });
+
+        return tier.get() + 1;
     }
 }

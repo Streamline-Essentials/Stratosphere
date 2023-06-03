@@ -3,9 +3,9 @@ package tv.quaint.stratosphere.config;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Material;
+import tv.quaint.storage.resources.flat.simple.SimpleConfiguration;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.config.bits.ConfiguredGenerator;
-import tv.quaint.storage.resources.flat.simple.SimpleConfiguration;
 
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -93,6 +93,8 @@ public class GeneratorConfig extends SimpleConfiguration {
         ConcurrentSkipListSet<ConfiguredGenerator> generators = new ConcurrentSkipListSet<>();
 
         singleLayerKeySet().forEach(key -> {
+            if (key.equalsIgnoreCase("ensureDefaults")) return;
+
             try {
                 int tier = getOrSetDefault(key + ".tier", 1);
                 ConcurrentSkipListMap<Material, Double> materials = new ConcurrentSkipListMap<>();

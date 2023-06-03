@@ -6,13 +6,10 @@ import tv.quaint.storage.resources.flat.simple.SimpleConfiguration;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
-import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
 
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class TopConfig extends SimpleConfiguration {
     @Getter @Setter

@@ -2,18 +2,11 @@ package tv.quaint.stratosphere.config;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.bukkit.Material;
-import org.bukkit.Statistic;
-import org.bukkit.entity.EntityType;
 import tv.quaint.storage.resources.flat.simple.SimpleConfiguration;
 import tv.quaint.stratosphere.Stratosphere;
-import tv.quaint.stratosphere.plot.quests.PlotQuest;
-import tv.quaint.stratosphere.plot.quests.ThingType;
-import tv.quaint.stratosphere.plot.quests.bits.QuestReward;
 import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
+import tv.quaint.stratosphere.utils.MessageUtils;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -90,6 +83,8 @@ public class UpgradeConfig extends SimpleConfiguration {
         getLoadedUpgrades().clear();
 
         getResource().singleLayerKeySet().forEach(key -> {
+            if (key.equalsIgnoreCase("ensureDefaults")) return;
+
             try {
                 PlotUpgrade.UpgradeType type = PlotUpgrade.UpgradeType.valueOf(getResource().getString(key + ".type"));
                 int tier = getResource().getInt(key + ".tier");
@@ -101,7 +96,7 @@ public class UpgradeConfig extends SimpleConfiguration {
 
                 getLoadedUpgrades().add(upgrade);
             } catch (Exception e) {
-                Stratosphere.getInstance().logWarning("Failed to load upgrade " + key + " from config. Error: " + e.getMessage() + " ->");
+                MessageUtils.logWarning("Failed to load upgrade " + key + " from config. Error: " + e.getMessage() + " ->");
                 e.printStackTrace();
             }
         });

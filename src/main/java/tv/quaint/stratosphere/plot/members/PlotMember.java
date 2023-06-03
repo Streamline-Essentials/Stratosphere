@@ -2,8 +2,6 @@ package tv.quaint.stratosphere.plot.members;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.modules.ModuleUtils;
-import net.streamline.api.savables.users.StreamlineUser;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import tv.quaint.stratosphere.plot.PlotUtils;
@@ -31,11 +29,7 @@ public class PlotMember implements Comparable<PlotMember> {
         return uuid.compareTo(o.getUuid());
     }
 
-    public StreamlineUser getUser() {
-        return ModuleUtils.getOrGetUser(uuid);
-    }
-
-    public SkyblockUser getSkyblockUser() {
+    public SkyblockUser getUser() {
         return PlotUtils.getOrGetUser(uuid);
     }
 

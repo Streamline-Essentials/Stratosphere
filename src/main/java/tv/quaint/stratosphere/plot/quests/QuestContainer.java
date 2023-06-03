@@ -2,9 +2,7 @@ package tv.quaint.stratosphere.plot.quests;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.modules.ModuleUtils;
-import net.streamline.api.registries.Identifiable;
-import net.streamline.api.savables.users.StreamlineUser;
+import tv.quaint.objects.Identifiable;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
@@ -14,7 +12,6 @@ import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.users.SkyblockUser;
 
 import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 public class QuestContainer implements Identifiable {
 //    public static final String COMPLETEDS_KEY = "completeds";
@@ -43,10 +40,6 @@ public class QuestContainer implements Identifiable {
 
     public void parseMeta(String string) {
         metaData = new QuestMetaData(string);
-    }
-
-    public StreamlineUser asStreamlineUser() {
-        return ModuleUtils.getOrGetPlayer(identifier);
     }
 
     public SkyblockUser asSkyblockUser() {
@@ -180,10 +173,6 @@ public class QuestContainer implements Identifiable {
 
     public SkyblockUser getSkyblockUser() {
         return PlotUtils.getOrGetUser(identifier);
-    }
-
-    public StreamlineUser getStreamlineUser() {
-        return ModuleUtils.getOrGetPlayer(identifier);
     }
 
 //    public void addCompleted(String identifier, String typed) {

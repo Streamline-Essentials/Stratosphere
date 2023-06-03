@@ -2,12 +2,10 @@ package tv.quaint.stratosphere.plot.quests;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.registries.Identifiable;
 import org.bukkit.Statistic;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import tv.quaint.objects.Identifiable;
 import tv.quaint.stratosphere.Stratosphere;
-import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.quests.bits.QuestReward;
 
 import java.util.List;

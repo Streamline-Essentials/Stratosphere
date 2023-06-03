@@ -4,7 +4,6 @@ import tv.quaint.stratosphere.plot.SkyblockPlot;
 import tv.quaint.stratosphere.plot.flag.PlotFlag;
 import tv.quaint.stratosphere.plot.members.PlotRole;
 import tv.quaint.stratosphere.plot.pos.PlotFlagIdentifiers;
-import tv.quaint.stratosphere.plot.pos.PlotFlagType;
 
 public class AdminRole extends PlotRole {
     public AdminRole(SkyblockPlot plot) {

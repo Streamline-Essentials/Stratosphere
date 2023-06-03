@@ -7,14 +7,13 @@ import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
 import tv.quaint.storage.resources.flat.simple.SimpleConfiguration;
 import tv.quaint.stratosphere.Stratosphere;
-import tv.quaint.stratosphere.config.bits.ConfiguredGenerator;
 import tv.quaint.stratosphere.plot.quests.PlotQuest;
 import tv.quaint.stratosphere.plot.quests.ThingType;
 import tv.quaint.stratosphere.plot.quests.bits.QuestReward;
+import tv.quaint.stratosphere.utils.MessageUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -75,6 +74,8 @@ public class QuestConfig extends SimpleConfiguration {
         getLoadedQuests().clear();
 
         getResource().singleLayerKeySet().forEach(key -> {
+            if (key.equalsIgnoreCase("ensureDefaults")) return;
+
             try {
                 Statistic type = Statistic.valueOf(getResource().getString(key + ".type"));
                 ThingType thingType = new ThingType(getResource().getString(key + ".thing"));
@@ -87,7 +88,7 @@ public class QuestConfig extends SimpleConfiguration {
                     QuestReward reward = new QuestReward(getResource().getString(key + ".rewards." + k));
 
                     if (reward.getPayload().equals("null")) {
-                        Stratosphere.getInstance().logWarning("Quest " + key + " has a null reward for key " + k + "! Skipping...");
+                        MessageUtils.logWarning("Quest " + key + " has a null reward for key " + k + "! Skipping...");
                         return;
                     }
 

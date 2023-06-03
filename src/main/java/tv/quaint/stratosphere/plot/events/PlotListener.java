@@ -22,6 +22,7 @@ import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
 import tv.quaint.stratosphere.plot.members.PlotRole;
 import tv.quaint.stratosphere.plot.pos.PlotFlagIdentifiers;
+import tv.quaint.stratosphere.users.SkyblockUser;
 
 /**
  * This class will handle all plot interactions.
@@ -33,6 +34,11 @@ import tv.quaint.stratosphere.plot.pos.PlotFlagIdentifiers;
  */
 public class PlotListener implements Listener {
     public static boolean shouldCancel(Player player, String flag) {
+        SkyblockUser user = PlotUtils.getOrGetUser(player.getUniqueId().toString());
+        if (user == null) return false;
+
+        if (user.isBypassingPlots()) return false;
+
         SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
         if (plot == null) return false;
 

@@ -2,7 +2,7 @@ package tv.quaint.stratosphere.plot.schematic.tree;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.streamline.api.registries.Identifiable;
+import tv.quaint.objects.Identifiable;
 import tv.quaint.stratosphere.plot.schematic.SkyblockSchematic;
 
 import javax.annotation.Nullable;

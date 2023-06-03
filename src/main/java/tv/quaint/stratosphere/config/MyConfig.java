@@ -6,7 +6,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import tv.quaint.stratosphere.Stratosphere;
-import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.schematic.SkyblockSchematic;
 import tv.quaint.stratosphere.plot.schematic.tree.BranchType;
 import tv.quaint.stratosphere.plot.schematic.tree.SchemBranch;

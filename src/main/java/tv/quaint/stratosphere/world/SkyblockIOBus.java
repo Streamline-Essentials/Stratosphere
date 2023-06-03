@@ -4,6 +4,7 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.session.SessionOwner;
+import tv.quaint.stratosphere.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
@@ -46,28 +47,28 @@ public class SkyblockIOBus {
     }
 
     public static World createSkyblockWorld(String worldName, WorldType worldType) {
-        Stratosphere.getInstance().logDebug("Creating world " + worldName + " of type " + worldType.name());
+        MessageUtils.logDebug("Creating world " + worldName + " of type " + worldType.name());
 
         WorldCreator worldCreator = new WorldCreator(worldName);
         worldCreator.type(worldType);
 
-        Stratosphere.getInstance().logDebug("Setting generator");
+        MessageUtils.logDebug("Setting generator");
 
         ChunkGenerator generator = new SkyblockChunkGenerator();
         worldCreator.generator(generator);
 
-        Stratosphere.getInstance().logDebug("Creating world");
+        MessageUtils.logDebug("Creating world");
 
         return worldCreator.createWorld();
     }
 
     public static World createSkyblockWorld(String identifier, String worldName, WorldType worldType) {
-        Stratosphere.getInstance().logDebug("Creating skyblock world " + identifier + " with name " + worldName + " and type " + worldType.name());
+        MessageUtils.logDebug("Creating skyblock world " + identifier + " with name " + worldName + " and type " + worldType.name());
 
         try {
             World world = createSkyblockWorld(worldName, worldType);
 
-            Stratosphere.getInstance().logDebug("World created!");
+            MessageUtils.logDebug("World created!");
 
             return world;
         } catch (Exception e) {

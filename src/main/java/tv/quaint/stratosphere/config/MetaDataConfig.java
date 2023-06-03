@@ -5,10 +5,7 @@ import lombok.Setter;
 import tv.quaint.storage.documents.SimpleJsonDocument;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.quests.QuestContainer;
-import tv.quaint.stratosphere.plot.quests.QuestMetaData;
 
-import java.io.File;
-import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class MetaDataConfig extends SimpleJsonDocument {
