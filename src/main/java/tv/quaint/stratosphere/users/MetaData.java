@@ -1,9 +1,9 @@
 package tv.quaint.stratosphere.users;
 
+import io.streamlined.bukkit.lib.thebase.lib.re2j.Matcher;
 import lombok.Getter;
 import lombok.Setter;
 import tv.quaint.objects.AtomicString;
-import tv.quaint.thebase.lib.re2j.Matcher;
 import tv.quaint.utils.MatcherUtils;
 
 import java.util.concurrent.ConcurrentSkipListSet;

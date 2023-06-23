@@ -42,12 +42,12 @@ public class PlotListener implements Listener {
         SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
         if (plot == null) return false;
 
-        PlotRole role = plot.getRole(player);
-        if (role == null) {
-            return true;
-        }
 
         boolean can = false;
+        PlotRole role = plot.getRole(player);
+        if (role == null) {
+            return can = true;
+        }
         if (role.hasFlag(flag)) {
             can = Boolean.parseBoolean(role.getFlag(flag).getValue());
         }

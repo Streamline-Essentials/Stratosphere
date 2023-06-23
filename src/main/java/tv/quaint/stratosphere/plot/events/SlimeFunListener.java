@@ -1,6 +1,7 @@
 package tv.quaint.stratosphere.plot.events;
 
 import io.github.thebusybiscuit.slimefun4.api.events.MultiBlockInteractEvent;
+import io.github.thebusybiscuit.slimefun4.api.events.PlayerRightClickEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,6 +20,17 @@ public class SlimeFunListener implements Listener {
 
         if (PlotListener.shouldCancel(player, PlotFlagIdentifiers.CAN_SLIMEFUN_INTERACT.getIdentifier())) {
             event.setCancelled(true);
+            return;
+        }
+    }
+
+    @EventHandler
+    public void onInteractMachineEvent(PlayerRightClickEvent event) {
+        Player player = event.getPlayer();
+        if (event.getSlimefunItem().isEmpty() && event.getSlimefunBlock().isEmpty()) return;
+
+        if (PlotListener.shouldCancel(player, PlotFlagIdentifiers.CAN_SLIMEFUN_INTERACT.getIdentifier())) {
+            event.getInteractEvent().setCancelled(true);
             return;
         }
     }

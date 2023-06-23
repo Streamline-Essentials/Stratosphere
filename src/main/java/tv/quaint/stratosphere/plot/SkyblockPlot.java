@@ -24,6 +24,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import tv.quaint.storage.documents.SimpleJsonDocument;
 import tv.quaint.stratosphere.Stratosphere;
+import tv.quaint.stratosphere.config.bits.PlotPosition;
 import tv.quaint.stratosphere.plot.flag.PlotFlag;
 import tv.quaint.stratosphere.plot.members.PlotMember;
 import tv.quaint.stratosphere.plot.members.PlotRole;
@@ -1634,5 +1635,9 @@ public class SkyblockPlot extends SavableResource {
         Stratosphere.getTopConfig().saveTopScore(this, calculateScore());
 
         uncachedPlayerTypeRequest(sender);
+    }
+
+    public PlotPosition getPlotPosition() {
+        return new PlotPosition(getIdentifier(), getLocationalOffset().getBlockX(), getLocationalOffset().getBlockZ());
     }
 }

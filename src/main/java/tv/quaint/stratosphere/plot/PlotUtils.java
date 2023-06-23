@@ -16,13 +16,20 @@ import tv.quaint.stratosphere.users.SkyblockUser;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class PlotUtils {
+    @Getter @Setter
+    private static ConcurrentSkipListMap<Date, Location> polledLocations = new ConcurrentSkipListMap<>();
+
     public static void initImmediately() {
     }
 
@@ -161,7 +168,44 @@ public class PlotUtils {
             if (p.isInPlot(location)) plot.set(p);
         });
 
+        if (plot.get() == null) {
+            SkyblockPlot p = Stratosphere.getPlotPosConfig().getPlotAt(location);
+
+            if (p != null) {
+                plot.set(p);
+                if (! p.isLoaded()) p.load();
+            }
+        }
+
         return plot.get();
+    }
+
+    public static ConcurrentSkipListSet<SkyblockPlot> getPlotsFromFiles() {
+        return getPlotsFromFiles(false);
+    }
+
+    public static ConcurrentSkipListSet<SkyblockPlot> getPlotsFromFiles(boolean load) {
+        ConcurrentSkipListSet<SkyblockPlot> plots = new ConcurrentSkipListSet<>();
+
+        File[] files = SkyblockIOBus.getPlotFolder().listFiles();
+        if (files == null) return plots;
+
+        for (File file : files) {
+            if (! file.exists()) continue;
+            if (! file.getName().endsWith(".json")) continue;
+
+            String uuid = file.getName().replace(".json", "");
+
+            SkyblockPlot plot = getPlot(uuid);
+            if (plot != null) continue;
+
+            plot = new SkyblockPlot(uuid);
+            plots.add(plot);
+
+            if (load) if (! plot.isLoaded()) plot.load();
+        }
+
+        return plots;
     }
 
     @Getter @Setter

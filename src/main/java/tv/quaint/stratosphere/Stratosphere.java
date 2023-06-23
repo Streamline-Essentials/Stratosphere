@@ -1,5 +1,6 @@
 package tv.quaint.stratosphere;
 
+import io.streamlined.bukkit.BukkitBase;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -8,6 +9,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import tv.quaint.objects.handling.derived.IPluginEventable;
 import tv.quaint.stratosphere.commands.IslandCommand;
 import tv.quaint.stratosphere.config.*;
+import tv.quaint.stratosphere.placeholders.StratosphereExpansion;
 import tv.quaint.stratosphere.plot.PlotUtils;
 import tv.quaint.stratosphere.plot.SkyblockPlot;
 import tv.quaint.stratosphere.plot.events.BukkitListener;
@@ -18,7 +20,7 @@ import tv.quaint.stratosphere.plot.timers.UserDustTimer;
 import tv.quaint.stratosphere.plot.timers.PlotKeepAliveTicker;
 import tv.quaint.stratosphere.users.SkyblockUser;
 
-public class Stratosphere extends JavaPlugin implements IPluginEventable {
+public class Stratosphere extends BukkitBase {
     @Getter @Setter
     private static Stratosphere instance;
     @Getter @Setter
@@ -33,6 +35,8 @@ public class Stratosphere extends JavaPlugin implements IPluginEventable {
     private static UpgradeConfig upgradeConfig;
     @Getter @Setter
     private static TopConfig topConfig;
+    @Getter @Setter
+    private static PlotPosConfig plotPosConfig;
 
     @Getter @Setter
     private static PlotKeepAliveTicker plotKeepAliveTicker;
@@ -45,16 +49,8 @@ public class Stratosphere extends JavaPlugin implements IPluginEventable {
     @Getter @Setter
     private static IslandCommand islandCommand;
 
-    @Getter @Setter
-    private String identifier;
-
     @Override
-    public void onLoad() {
-        identifier = "Stratosphere";
-    }
-
-    @Override
-    public void onEnable() {
+    public void enable() {
         // Plugin startup logic
         instance = this;
         PlotUtils.initImmediately();
@@ -66,6 +62,7 @@ public class Stratosphere extends JavaPlugin implements IPluginEventable {
         metaDataConfig = new MetaDataConfig();
         upgradeConfig = new UpgradeConfig();
         topConfig = new TopConfig();
+        plotPosConfig = new PlotPosConfig();
 
         Bukkit.getPluginManager().registerEvents(new PlotListener(), this);
         Bukkit.getPluginManager().registerEvents(new BukkitListener(), this);
@@ -78,10 +75,12 @@ public class Stratosphere extends JavaPlugin implements IPluginEventable {
         userDustTimer = new UserDustTimer();
 
         islandCommand = new IslandCommand();
+
+        new StratosphereExpansion().register();
     }
 
     @Override
-    public void onDisable() {
+    public void disable() {
         Bukkit.getWorlds().forEach(World::save);
 
         //            SkyblockIOBus.packWorld(plot.getIdentifier(), plot.getSkyWorld().getWorld());

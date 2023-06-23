@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
 import tv.quaint.stratosphere.Stratosphere;
+import tv.quaint.stratosphere.config.bits.PlotPosition;
 import tv.quaint.stratosphere.plot.PlotUtils;
 
 public class PlotKeepAliveTicker implements Runnable {
@@ -23,6 +24,9 @@ public class PlotKeepAliveTicker implements Runnable {
                 plot.saveAll();
                 plot.unload();
             }
+
+            PlotPosition pos = plot.getPlotPosition();
+            Stratosphere.getPlotPosConfig().savePlotPosition(pos);
         });
     }
 

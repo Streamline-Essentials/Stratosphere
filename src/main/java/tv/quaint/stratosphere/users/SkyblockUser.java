@@ -163,15 +163,16 @@ public class SkyblockUser extends SavableResource {
         return Bukkit.getPlayer(UUID.fromString(getUuid()));
     }
 
+    public OfflinePlayer getOfflinePlayer() {
+        return Bukkit.getOfflinePlayer(UUID.fromString(getUuid()));
+    }
+
     public boolean isOnline() {
         return getBukkitPlayer() != null;
     }
 
     public void sendMessage(String message) {
-        if (! isOnline()) {
-            MessageUtils.logWarning("Tried to send message to offline player: " + getDisplayName());
-            return;
-        }
+        if (! isOnline()) return;
 
         MessageUtils.sendMessage(getBukkitPlayer(), message);
     }

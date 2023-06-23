@@ -54,13 +54,18 @@ public class TopConfig extends SimpleConfiguration {
     }
 
     public void loadTopScore(SkyblockPlot plot, double score) {
-        ConcurrentSkipListMap<String, Double> map = getLoadedTop().get(plot.getPlotType());
+        if (getLoadedTop() == null) setLoadedTop(new ConcurrentSkipListMap<>());
+        SkyblockPlot.PlotType type = plot.getPlotType();
+        if (type == null) return;
+        ConcurrentSkipListMap<String, Double> map = getLoadedTop().get(type);
         if (map == null) map = new ConcurrentSkipListMap<>();
         map.put(plot.getUuid(), score);
         getLoadedTop().put(plot.getPlotType(), map);
     }
 
     public void unloadTopScore(SkyblockPlot plot) {
+        if (getLoadedTop() == null) setLoadedTop(new ConcurrentSkipListMap<>());
+
         getLoadedTop().forEach((type, map) -> {
             map.forEach((uuid, score) -> {
                 if (uuid.equals(plot.getUuid())) {

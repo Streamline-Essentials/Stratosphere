@@ -18,6 +18,7 @@ public class UserDustTimer implements Runnable {
     public void run() {
         PlotUtils.getLoadedUsers().forEach(user -> {
             if (user != null) {
+                if (! user.isOnline()) return;
                 if (user.isAlreadyInPlot()) {
                     user.addStarDust(5);
                     user.sendMessage("&bYou have gained &f5 &dStar Dust &bfor being a member of an island!");

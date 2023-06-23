@@ -1,5 +1,6 @@
 package tv.quaint.stratosphere.commands;
 
+import io.streamlined.bukkit.commands.AbstractQuaintCommand;
 import tv.quaint.stratosphere.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -23,6 +24,7 @@ import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
 import tv.quaint.stratosphere.plot.upgrades.UpgradeTask;
 import tv.quaint.stratosphere.users.SkyblockUser;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
+import tv.quaint.utils.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -43,7 +45,7 @@ public class IslandCommand extends AbstractQuaintCommand {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean command(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         run(sender, command, label, args);
         return true;
     }
@@ -1197,6 +1199,8 @@ public class IslandCommand extends AbstractQuaintCommand {
                     sb.append("%newline%");
                 }
             }
+
+            index ++;
         }
 
         sb.append("%newline%&aUse &f/island help <page> &ato view other pages.");
@@ -1205,12 +1209,12 @@ public class IslandCommand extends AbstractQuaintCommand {
     }
     
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (! (sender instanceof Player)) return new ArrayList<>();
+    public ConcurrentSkipListSet<String> tabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (! (sender instanceof Player)) return new ConcurrentSkipListSet<>();
         Player player = (Player) sender;
 
         SkyblockUser user = PlotUtils.getOrGetUser(player.getUniqueId().toString());
-        if (user == null) return new ArrayList<>();
+        if (user == null) return new ConcurrentSkipListSet<>();
 
         ConcurrentSkipListSet<String> options = new ConcurrentSkipListSet<>();
 
@@ -1274,7 +1278,7 @@ public class IslandCommand extends AbstractQuaintCommand {
                     options.add("get");
                 }
                 if (args.length == 3) {
-                    return Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
+                    Bukkit.getOnlinePlayers().forEach((onlinePlayer) -> options.add(onlinePlayer.getName()));
                 }
             }
             if (args[0].equalsIgnoreCase("create")) {
@@ -1292,7 +1296,7 @@ public class IslandCommand extends AbstractQuaintCommand {
             if (args[0].equalsIgnoreCase("invite") || args[0].equalsIgnoreCase("accept")
                     || args[0].equalsIgnoreCase("deny") || args[0].equalsIgnoreCase("join")) {
                 if (args.length == 2) {
-                    return Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
+                    Bukkit.getOnlinePlayers().forEach((onlinePlayer) -> options.add(onlinePlayer.getName()));
                 }
             }
             if (args[0].equalsIgnoreCase("kick") || args[0].equalsIgnoreCase("promote")
@@ -1336,6 +1340,14 @@ public class IslandCommand extends AbstractQuaintCommand {
             }
         }
 
-        return options.stream().toList();
+        String lastArg = "";
+
+        try {
+            lastArg = args[args.length - 1];
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return StringUtils.getAsCompletion(lastArg, options);
     }
 }
