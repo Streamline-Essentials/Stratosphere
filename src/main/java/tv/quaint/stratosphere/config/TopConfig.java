@@ -17,14 +17,14 @@ public class TopConfig extends SimpleConfiguration {
 
     public TopConfig() {
         super("top.yml", Stratosphere.getInstance(), false);
-
-        reloadTheConfig();
     }
 
     @Override
     public void init() {
         // Load all quests.
         loadAllUpgrades();
+
+        ensureNoFalsePlots();
     }
 
     public void reloadTheConfig() {
@@ -32,6 +32,8 @@ public class TopConfig extends SimpleConfiguration {
 
         // Quests.
         loadAllUpgrades();
+
+        ensureNoFalsePlots();
     }
 
     public void loadAllUpgrades() {
@@ -77,6 +79,7 @@ public class TopConfig extends SimpleConfiguration {
 
     public void saveTopScore(SkyblockPlot plot, double score) {
         loadTopScore(plot, score);
+        if (plot.getPlotType() == null) return;
         write(plot.getPlotType().name() + "." + plot.getUuid(), score);
     }
 
@@ -88,6 +91,8 @@ public class TopConfig extends SimpleConfiguration {
     }
 
     public ConcurrentHashMap<Integer, SkyblockPlot> getTopScores(int amount) {
+        ensureNoFalsePlots();
+
         ConcurrentHashMap<Integer, SkyblockPlot> top = new ConcurrentHashMap<>();
 
         ConcurrentSkipListMap<Double, String> sorted = new ConcurrentSkipListMap<>();
@@ -128,6 +133,8 @@ public class TopConfig extends SimpleConfiguration {
     }
 
     public ConcurrentHashMap<Integer, SkyblockPlot> getTopScores(SkyblockPlot.PlotType type, int amount) {
+        ensureNoFalsePlots();
+
         ConcurrentHashMap<Integer, SkyblockPlot> top = new ConcurrentHashMap<>();
 
         ConcurrentSkipListMap<Double, String> sorted = new ConcurrentSkipListMap<>();
@@ -163,5 +170,16 @@ public class TopConfig extends SimpleConfiguration {
         }
 
         return top;
+    }
+
+    public void ensureNoFalsePlots() {
+        getLoadedTop().forEach((type, map) -> {
+            map.forEach((uuid, score) -> {
+                SkyblockPlot plot = PlotUtils.getOrGetPlot(uuid);
+                if (plot == null) {
+                    map.remove(uuid);
+                }
+            });
+        });
     }
 }

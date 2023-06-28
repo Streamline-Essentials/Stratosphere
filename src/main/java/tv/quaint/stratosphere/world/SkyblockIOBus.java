@@ -86,6 +86,40 @@ public class SkyblockIOBus {
         return world;
     }
 
+    public static World createSkyblockNether(String worldName, WorldType worldType) {
+        MessageUtils.logDebug("Creating nether world " + worldName + " of type " + worldType.name());
+
+        WorldCreator worldCreator = new WorldCreator(worldName);
+        worldCreator.type(worldType);
+        worldCreator.environment(World.Environment.NETHER);
+
+        MessageUtils.logDebug("Setting nether generator");
+
+        ChunkGenerator generator = new SkyblockChunkGenerator();
+        worldCreator.generator(generator);
+
+        MessageUtils.logDebug("Creating nether world");
+
+        return worldCreator.createWorld();
+    }
+
+    public static World createSkyblockEnd(String worldName, WorldType worldType) {
+        MessageUtils.logDebug("Creating nether world " + worldName + " of type " + worldType.name());
+
+        WorldCreator worldCreator = new WorldCreator(worldName);
+        worldCreator.type(worldType);
+        worldCreator.environment(World.Environment.THE_END);
+
+        MessageUtils.logDebug("Setting nether generator");
+
+        ChunkGenerator generator = new SkyblockChunkGenerator();
+        worldCreator.generator(generator);
+
+        MessageUtils.logDebug("Creating nether world");
+
+        return worldCreator.createWorld();
+    }
+
     public static World getOrGetSkyblockWorld(WorldType worldType) {
         String worldName = Stratosphere.getMyConfig().getIslandWorldName();
 
@@ -94,6 +128,48 @@ public class SkyblockIOBus {
 
     public static World getOrGetSkyblockWorld() {
         return getOrGetSkyblockWorld(WorldType.NORMAL);
+    }
+
+    public static World getOrGetSkyblockNether(String worldName, WorldType worldType) {
+        if (! worldName.endsWith("_nether")) worldName = worldName + "_nether";
+
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            world = createSkyblockNether(worldName, worldType);
+        }
+
+        return world;
+    }
+
+    public static World getOrGetSkyblockNether(WorldType worldType) {
+        String worldName = Stratosphere.getMyConfig().getIslandWorldName();
+
+        return getOrGetSkyblockNether(worldName, worldType);
+    }
+
+    public static World getOrGetSkyblockNether() {
+        return getOrGetSkyblockNether(WorldType.NORMAL);
+    }
+
+    public static World getOrGetSkyblockEnd(String worldName, WorldType worldType) {
+        if (! worldName.endsWith("_the_end")) worldName = worldName + "_the_end";
+
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            world = createSkyblockEnd(worldName, worldType);
+        }
+
+        return world;
+    }
+
+    public static World getOrGetSkyblockEnd(WorldType worldType) {
+        String worldName = Stratosphere.getMyConfig().getIslandWorldName();
+
+        return getOrGetSkyblockEnd(worldName, worldType);
+    }
+
+    public static World getOrGetSkyblockEnd() {
+        return getOrGetSkyblockEnd(WorldType.NORMAL);
     }
 
     private static ConcurrentSkipListSet<PlotFlag> plotFlags = new ConcurrentSkipListSet<>();

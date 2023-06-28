@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import tv.quaint.storage.StorageUtils;
 import tv.quaint.stratosphere.Stratosphere;
 import tv.quaint.stratosphere.plot.schematic.SkyblockSchematic;
 import tv.quaint.stratosphere.plot.schematic.tree.BranchType;
@@ -13,7 +14,11 @@ import tv.quaint.stratosphere.plot.schematic.tree.SchemTree;
 import tv.quaint.storage.resources.flat.simple.SimpleConfiguration;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class MyConfig extends SimpleConfiguration {
@@ -21,9 +26,7 @@ public class MyConfig extends SimpleConfiguration {
     public ConcurrentSkipListSet<SchemTree> schematicTrees;
 
     public MyConfig() {
-        super("config.yml", Stratosphere.getInstance(), false);
-
-        reloadTheConfig();
+        super("config.yml", Stratosphere.getInstance(), true);
     }
 
     @Override
@@ -39,11 +42,13 @@ public class MyConfig extends SimpleConfiguration {
         getIslandDefaultSize();
         getIslandDefaultY();
         getIslandWorldName();
+        getCurrentPlotCount();
+        getIslandLevellingEquation();
+        getNetherUnlockCost();
+        getEndUnlockCost();
 
         // Schematic Stuff.
-        write("schematics.default.normal", "normal");
-        write("schematics.default.nether", "nether");
-        write("schematics.default.end", "end");
+        ensureDefaultSchematics();
         schematicTrees = new ConcurrentSkipListSet<>();
         schematicTrees = getSchematicTreesFromConfig();
 
@@ -54,59 +59,44 @@ public class MyConfig extends SimpleConfiguration {
     public void reloadTheConfig() {
         reloadResource(true);
 
+        // Schematic Stuff.
+        ensureDefaultSchematics();
         schematicTrees = getSchematicTreesFromConfig();
     }
 
     public String getConnectionURI() {
-        reloadResource();
-
         return getResource().getOrSetDefault("database.uri", "jdbc:SQLITE:plugins/StreamlineCore/module-resources/stratosphere/stratosphere.db");
     }
 
     public String getTablePrefix() {
-        reloadResource();
-
         return getResource().getOrSetDefault("database.tablePrefix", "skyhigh_");
     }
 
     public int getSaveIntervalInTicks() {
-        reloadResource();
-
         return getResource().getOrSetDefault("database.saveIntervalInTicks", 20 * 60 * 5);
     }
 
     public double getIslandBufferDistance() {
-        reloadResource();
-
         return getResource().getOrSetDefault("island.size.buffer", 512d);
     }
 
     public double getIslandAbsoluteSize() {
-        reloadResource();
-
         return getResource().getOrSetDefault("island.size.absolute", 1600d);
     }
 
     public double getIslandDefaultSize() {
-        reloadResource();
-
         return getResource().getOrSetDefault("island.size.default", 50d);
     }
 
     public int getIslandDefaultY() {
-        reloadResource();
-
         return getResource().getOrSetDefault("island.default-y-height", 150);
     }
 
     public String getIslandWorldName() {
-        reloadResource();
-
         return getResource().getOrSetDefault("island.world.name", "Stratosphere");
     }
 
     public ConcurrentSkipListSet<SchemTree> getSchematicTreesFromConfig() {
-        reloadResource();
         ConcurrentSkipListSet<SchemTree> schemTrees = new ConcurrentSkipListSet<>();
 
         getResource().singleLayerKeySet("schematics").forEach(schem -> {
@@ -166,8 +156,6 @@ public class MyConfig extends SimpleConfiguration {
     }
 
     public Location getSpawnLocation() {
-        reloadResource();
-
         String world = getResource().getOrSetDefault("spawn.world", "world");
         double x = getResource().getOrSetDefault("spawn.x", 0.0);
         double y = getResource().getOrSetDefault("spawn.y", 0.0);
@@ -205,9 +193,7 @@ public class MyConfig extends SimpleConfiguration {
         getResource().set("current-plot.pitch", location.getPitch());
     }
 
-    public Location getNextPlotPosition() {
-        reloadResource();
-
+    public Location getCurrentPlotPosition() {
         String world = getResource().getOrSetDefault("current-plot.world", getIslandWorldName());
         double x = getResource().getOrSetDefault("current-plot.x", 0.0d);
         double y = getResource().getOrSetDefault("current-plot.y", 0.0d);
@@ -215,35 +201,121 @@ public class MyConfig extends SimpleConfiguration {
         float yaw = getResource().getOrSetDefault("current-plot.yaw", 0.0f);
         float pitch = getResource().getOrSetDefault("current-plot.pitch", 0.0f);
 
-        World bukkitWorld = SkyblockIOBus.getOrGetSkyblockWorld();
+        World bukkitWorld = Bukkit.getWorld(world);
         if (bukkitWorld == null) return null;
         bukkitWorld.getWorldBorder().setCenter(0, 0);
         bukkitWorld.getWorldBorder().setSize(30000000);
 
-        Location currentLocation = new Location(bukkitWorld, x, y, z, yaw, pitch);
-        Location nextLocation = currentLocation.clone();
+        return new Location(bukkitWorld, x, y, z, yaw, pitch);
+    }
 
-        int x_add = (int) (Math.ceil(getIslandAbsoluteSize() + getIslandBufferDistance()));
-        int z_add = (int) (Math.ceil(getIslandAbsoluteSize() + getIslandBufferDistance()));
+    public int getCurrentPlotCount() {
+        return getResource().getOrSetDefault("island.current-count", 0);
+    }
 
-        double x_next = nextLocation.getX() + x_add;
-        double z_next = nextLocation.getZ();
+    public int setAbsolutePlotsAmount(int amount) {
+        getResource().set("island.current-count", amount);
 
-        if (x_next > 1000000d) {
-            x_next = 0;
-            z_next = z_next + z_add;
-            if (z_next > 1000000d) {
-                z_next = -1000000d;
+        return amount;
+    }
+
+    public int incrementAbsolutePlotsAmount(int amount) {
+        int i = getCurrentPlotCount();
+
+        i += amount;
+
+        return setAbsolutePlotsAmount(i);
+    }
+
+    public int getAbsolutePlotsFilesAmount() {
+        File[] files = SkyblockIOBus.getPlotFolder().listFiles();
+
+        AtomicInteger amount = new AtomicInteger(0);
+
+        if (files == null) return amount.get();
+
+        Arrays.stream(files).forEach(file -> {
+            if (file.isDirectory()) return;
+            if (! file.getName().endsWith(".json")) return;
+
+            amount.getAndIncrement();
+        });
+
+        return amount.get();
+    }
+
+    public Location getNextPlotPosition(int from) {
+        double x = 0d;
+        int y = getIslandDefaultY();
+        double z = 0d;
+
+        for (int i = 0; i < from; i ++) {
+            x = x + (int) (Math.ceil(getIslandAbsoluteSize() + getIslandBufferDistance()));
+            if (x > 10000000d) {
+                x = 0d;
+                z = z + (int) (Math.ceil(getIslandAbsoluteSize() + getIslandBufferDistance()));
+                if (z > 10000000d) {
+                    x = -10000000d;
+                    z = -10000000d;
+                }
             }
         }
 
-        if (z_next > 1000000d) {
-            z_next = 0;
+        return new Location(SkyblockIOBus.getOrGetSkyblockWorld(), x, y, z);
+    }
+
+    public Location getNextPlotPosition() {
+        int amount = getCurrentPlotCount();
+
+        return getNextPlotPosition(amount);
+    }
+
+    public boolean doesSchemExist(String filename) {
+        if (filename == null) return false;
+        if (! filename.endsWith(".schem")) filename = filename + ".schem";
+
+        File[] files = SkyblockIOBus.getSchematicsFolder().listFiles();
+
+        if (files == null) return false;
+
+        for (File file : files) {
+            if (file.isDirectory()) continue;
+            if (! file.getName().endsWith(".schem")) continue;
+
+            if (file.getName().equals(filename)) return true;
         }
 
-        nextLocation.setX(x_next);
-        nextLocation.setZ(z_next);
+        return false;
+    }
 
-        return nextLocation;
+    public void ensureDefaultSchematics() {
+        List<String> defaultSchemNames = Arrays.asList(
+                "normal",
+                "desert",
+                "nether",
+                "end"
+        );
+
+        defaultSchemNames.forEach(name -> {
+            if (! doesSchemExist(name)) {
+                String filename = name;
+                if (! filename.endsWith(".schem")) filename = filename + ".schem";
+                File file = new File(SkyblockIOBus.getSchematicsFolder(), filename);
+
+                StorageUtils.ensureFileFromSelf(this.getClass().getClassLoader(), SkyblockIOBus.getSchematicsFolder(), file, filename);
+            }
+        });
+    }
+
+    public String getIslandLevellingEquation() {
+        return getResource().getOrSetDefault("island.levelling-equation", "0.001 * %plot_level_real% ^ 2 + 100");
+    }
+
+    public int getNetherUnlockCost() {
+        return getOrSetDefault("island.unlocks.nether.cost", 1000);
+    }
+
+    public int getEndUnlockCost() {
+        return getOrSetDefault("island.unlocks.end.cost", 1000);
     }
 }

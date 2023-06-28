@@ -23,6 +23,12 @@ public class PlotPosition implements Identifiable {
     public boolean isLocationWithin(Location location) {
         double maxRadius = Stratosphere.getMyConfig().getIslandAbsoluteSize() / 2;
 
+        if (location.getWorld().getName().equals(Stratosphere.getMyConfig().getIslandWorldName() + "_nether")) {
+            maxRadius /= 8;
+            return location.getX() >= x * 8 - maxRadius && location.getX() <= x * 8 + maxRadius &&
+                    location.getZ() >= z * 8 - maxRadius && location.getZ() <= z * 8 + maxRadius;
+        }
+
         return location.getX() >= x - maxRadius && location.getX() <= x + maxRadius &&
                 location.getZ() >= z - maxRadius && location.getZ() <= z + maxRadius;
     }

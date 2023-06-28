@@ -1,0 +1,41 @@
+database:
+  uri: jdbc:SQLITE:plugins/Stratosphere/stratosphere.db
+  tablePrefix: stratosphere_
+  saveIntervalInTicks: 6000
+spawn:
+  x: 0.5
+  y: 64.0
+  z: 0.5
+  world: spawn
+  pitch: 0.0
+  yaw: 0.0
+current-plot:
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  pitch: 0.0
+  world: Stratosphere
+  yaw: 0.0
+island:
+  current-count: 0
+  size:
+    absolute: 1600.0
+    default: 50.0
+    buffer: 512.0
+  default-y-height: 150
+  world:
+    name: Stratosphere
+  unlocks:
+    nether:
+      cost: 100000
+    end:
+      cost: 1000000
+schematics:
+  desert:
+    normal: desert
+    nether: nether
+    end: end
+  default:
+    normal: normal
+    nether: nether
+    end: end

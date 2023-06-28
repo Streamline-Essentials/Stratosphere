@@ -17,8 +17,6 @@ public class GeneratorConfig extends SimpleConfiguration {
 
     public GeneratorConfig() {
         super("generators.yml", Stratosphere.getInstance(), false);
-
-        reloadTheConfig();
     }
 
     public static void initialize() {

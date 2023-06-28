@@ -16,8 +16,6 @@ public class UpgradeConfig extends SimpleConfiguration {
 
     public UpgradeConfig() {
         super("upgrades.yml", Stratosphere.getInstance(), false);
-
-        reloadTheConfig();
     }
 
     @Override

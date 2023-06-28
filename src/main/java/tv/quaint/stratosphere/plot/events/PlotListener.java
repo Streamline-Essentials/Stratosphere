@@ -1,7 +1,9 @@
 package tv.quaint.stratosphere.plot.events;
 
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -42,7 +44,6 @@ public class PlotListener implements Listener {
         SkyblockPlot plot = PlotUtils.getPlotByLocation(player.getLocation());
         if (plot == null) return false;
 
-
         boolean can = false;
         PlotRole role = plot.getRole(player);
         if (role == null) {
@@ -51,6 +52,11 @@ public class PlotListener implements Listener {
         if (role.hasFlag(flag)) {
             can = Boolean.parseBoolean(role.getFlag(flag).getValue());
         }
+
+        if (! can) {
+            player.sendMessage("§cYou do not have permission to do that here.");
+        }
+
         return ! can;
     }
 
@@ -816,6 +822,51 @@ public class PlotListener implements Listener {
                     }
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void onNetherPortalEnter(EntityPortalEvent event) {
+        Entity entity = event.getEntity();
+
+        SkyblockPlot plot = PlotUtils.getPlotByLocation(event.getFrom());
+        if (plot == null) return;
+
+        Location to = event.getTo();
+        if (to == null) return;
+        World toWorld = to.getWorld();
+        if (toWorld == null) return;
+
+        if (! plot.isUnlocked(toWorld.getEnvironment())) {
+            event.setCancelled(true);
+            if (entity instanceof Player) {
+                Player player = (Player) entity;
+
+                SkyblockUser user = PlotUtils.getOrGetUser(player.getUniqueId().toString());
+                if (user == null) return;
+                user.sendMessage("&cYou cannot enter this portal because this island has not unlocked the &d" + toWorld.getEnvironment().name().toLowerCase() + " &cyet.");
+            }
+            return;
+        }
+
+        switch (toWorld.getEnvironment()) {
+            case NORMAL:
+                event.setTo(plot.getSpawnPos().toLocation());
+                break;
+            case NETHER:
+                event.setTo(plot.getNetherSpawnLocation());
+                break;
+            case THE_END:
+                event.setTo(plot.getEndSpawnLocation());
+                break;
+        }
+
+        if (entity instanceof Player) {
+            Player player = (Player) entity;
+
+            SkyblockUser user = PlotUtils.getOrGetUser(player.getUniqueId().toString());
+            if (user == null) return;
+            user.sendMessage("&7You teleported to the &b" + toWorld.getEnvironment().name().toLowerCase() + " &7for this island!");
         }
     }
 }

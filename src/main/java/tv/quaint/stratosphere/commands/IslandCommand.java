@@ -1,6 +1,10 @@
 package tv.quaint.stratosphere.commands;
 
+import com.sk89q.worldedit.world.biome.BiomeTypes;
 import io.streamlined.bukkit.commands.AbstractQuaintCommand;
+import org.bukkit.World;
+import org.bukkit.block.Biome;
+import tv.quaint.stratosphere.plot.pos.PlotFlagIdentifiers;
 import tv.quaint.stratosphere.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -26,6 +30,7 @@ import tv.quaint.stratosphere.users.SkyblockUser;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
 import tv.quaint.utils.StringUtils;
 
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -125,6 +130,56 @@ public class IslandCommand extends AbstractQuaintCommand {
                         player.teleport(location);
 
                         skyblockUser.sendMessage("&aTeleported to the main spawn location!");
+                    } else {
+                        skyblockUser.sendMessage("&cYou do not have enough permissions to do this...!");
+                    }
+                    break;
+                case "unlock":
+                    if (skyblockUser.hasPermission("stratosphere.island.unlock")) {
+                        if (! isUsable(args, 1)) {
+                            skyblockUser.sendMessage("&cYou must specify a schematic to unlock!");
+                            return;
+                        }
+
+                        String env = args[1].toUpperCase();
+
+                        World.Environment environment = null;
+                        try {
+                            if (env.equals("END")) env = "THE_END";
+                            environment = World.Environment.valueOf(env);
+
+                            if (environment == World.Environment.NORMAL || environment == World.Environment.CUSTOM) throw new Exception("Invalid environment!");
+                        } catch (Exception e) {
+                            skyblockUser.sendMessage("&cNot a valid unlock! Can be: NETHER or THE_END");
+                            e.printStackTrace();
+                            return;
+                        }
+
+                        SkyblockPlot plot1 = PlotUtils.getOrGetPlot(player);
+                        if (plot1 == null) {
+                            skyblockUser.sendMessage("&cYou are not a member of a plot!");
+                            return;
+                        }
+
+                        if (environment == World.Environment.NETHER) {
+                            if (skyblockUser.getStarDust() < Stratosphere.getMyConfig().getNetherUnlockCost()) {
+                                skyblockUser.sendMessage("&cYou do not have enough star dust to unlock this!");
+                                return;
+                            }
+                            plot1.unlockNether();
+                            return;
+                        }
+
+                        if (environment == World.Environment.THE_END) {
+                            if (skyblockUser.getStarDust() < Stratosphere.getMyConfig().getEndUnlockCost()) {
+                                skyblockUser.sendMessage("&cYou do not have enough star dust to unlock this!");
+                                return;
+                            }
+                            plot1.unlockEnd();
+                            return;
+                        }
+
+                        skyblockUser.sendMessage("&aUnlocked &b" + env + "&a!");
                     } else {
                         skyblockUser.sendMessage("&cYou do not have enough permissions to do this...!");
                     }
@@ -323,6 +378,34 @@ public class IslandCommand extends AbstractQuaintCommand {
                     targetPlot1.addMember(member);
 
                     skyblockUser.sendMessage("&aJoined &b" + targetName1 + "'s &aplot!");
+                    break;
+                case "trust":
+                    if (! isUsable(args, 1)) {
+                        skyblockUser.sendMessage("&cYou must specify a player name!");
+                        return;
+                    }
+
+                    String targetName300 = args[1];
+
+                    SkyblockUser targetUser300 = PlotUtils.getOrGetUser(targetName300);
+
+                    SkyblockPlot targetPlot300 = PlotUtils.getOrGetPlot(skyblockUser);
+                    if (targetUser300 == null) {
+                        skyblockUser.sendMessage("&cPlayer &b" + targetName300 + " &cis not a valid user!");
+                        return;
+                    }
+
+                    if (targetPlot300 == null) {
+                        skyblockUser.sendMessage("&cYou do not have a plot!");
+                        return;
+                    }
+
+                    if (! targetPlot300.getMember(skyblockUser.getUuid()).getRole().hasFlag(PlotFlagIdentifiers.TRUST_USERS.getIdentifier())) {
+                        skyblockUser.sendMessage("&cYou do not have permission to do this!");
+                        return;
+                    }
+
+                    targetPlot300.trustUser(targetUser300, skyblockUser);
                     break;
                 case "bypass":
                     if (! skyblockUser.hasPermission("stratosphere.island.bypass")) {
@@ -1096,6 +1179,103 @@ public class IslandCommand extends AbstractQuaintCommand {
                             break;
                     }
                     break;
+                case "set-island":
+                    if (! skyblockUser.hasPermission("stratosphere.admin")) {
+                        skyblockUser.sendMessage("&cYou do not have permission to use this command!");
+                        return;
+                    }
+
+                    if (! isUsable(args, 2)) {
+                        skyblockUser.sendMessage("&cUsage: /island set-island <player> <uuid>");
+                        return;
+                    }
+
+                    String playerToSetIsland = args[1];
+
+                    SkyblockUser user6 = PlotUtils.getOrGetUser(playerToSetIsland);
+
+                    if (user6 == null) {
+                        skyblockUser.sendMessage("&cPlayer " + playerToSetIsland + " does not exist!");
+                        return;
+                    }
+
+                    String setUuid = args[2];
+
+                    user6.setPlotUuid(setUuid);
+
+                    skyblockUser.sendMessage("&aSet " + playerToSetIsland + "'s island to " + setUuid + "!");
+                    break;
+                case "set-deleted":
+                    if (! skyblockUser.hasPermission("stratosphere.admin")) {
+                        skyblockUser.sendMessage("&cYou do not have permission to use this command!");
+                        return;
+                    }
+
+                    if (! isUsable(args, 1)) {
+                        skyblockUser.sendMessage("&cUsage: /island set-deleted <player>");
+                        return;
+                    }
+
+                    String playerToSetDeleted = args[1];
+
+                    SkyblockUser user7 = PlotUtils.getOrGetUser(playerToSetDeleted);
+
+                    if (user7 == null) {
+                        skyblockUser.sendMessage("&cPlayer " + playerToSetDeleted + " does not exist!");
+                        return;
+                    }
+
+                    SkyblockPlot plot3000 = PlotUtils.getOrGetPlot(user7.getPlotUuid());
+                    if (plot3000 == null) {
+                        skyblockUser.sendMessage("&cPlayer " + playerToSetDeleted + " does not have an island!");
+                        return;
+                    }
+
+                    plot3000.delete();
+
+                    skyblockUser.sendMessage("&aSet " + playerToSetDeleted + "'s island to deleted!");
+                    break;
+                case "set-biome":
+                    if (! skyblockUser.hasPermission("stratosphere.admin")) {
+                        skyblockUser.sendMessage("&cYou do not have permission to use this command!");
+                        return;
+                    }
+
+                    if (! isUsable(args, 2)) {
+                        skyblockUser.sendMessage("&cUsage: /island set-biome <biome>");
+                        return;
+                    }
+
+                    String biomeToSet = args[1];
+
+                    SkyblockPlot plot3002 = PlotUtils.getOrGetPlot(skyblockUser.getPlotUuid());
+                    if (plot3002 == null) {
+                        skyblockUser.sendMessage("&cYou do not have an island!");
+                        return;
+                    }
+
+                    boolean b = plot3002.setBiome(biomeToSet);
+
+                    if (! b) {
+                        skyblockUser.sendMessage("&cInvalid biome!");
+                        return;
+                    }
+                    break;
+                case "tpend":
+                    if (! skyblockUser.hasPermission("stratosphere.command.island.tpend")) {
+                        skyblockUser.sendMessage("&cYou do not have permission to use this command!");
+                        return;
+                    }
+
+                    SkyblockPlot plot3001 = PlotUtils.getOrGetPlot(skyblockUser.getPlotUuid());
+                    if (plot3001 == null) {
+                        skyblockUser.sendMessage("&cYou do not have an island!");
+                        return;
+                    }
+
+                    player.teleport(plot3001.getEndSpawnLocation());
+                    skyblockUser.sendMessage("&aTeleported to your island's end spawn!");
+                    break;
                 case "help":
                     int page1000 = 1;
 
@@ -1116,6 +1296,7 @@ public class IslandCommand extends AbstractQuaintCommand {
                     String aHelp = getDefaultAnswer(skyblockUser, page1000);
 
                     skyblockUser.sendMessage(aHelp);
+                    break;
                 default:
                     String a = getDefaultAnswer(skyblockUser, 1);
 
@@ -1265,6 +1446,13 @@ public class IslandCommand extends AbstractQuaintCommand {
             options.add("loadall");
             options.add("schematics");
 
+            options.add("trust");
+
+            options.add("unlock");
+            options.add("tpend");
+
+            options.add("set-biome");
+
             options.add("help");
         } else if (args.length >= 2) {
             SkyblockPlot plot = PlotUtils.getOrGetPlot(user);
@@ -1281,6 +1469,12 @@ public class IslandCommand extends AbstractQuaintCommand {
                     Bukkit.getOnlinePlayers().forEach((onlinePlayer) -> options.add(onlinePlayer.getName()));
                 }
             }
+            if (args[0].equalsIgnoreCase("unlock")) {
+                if (args.length == 2) {
+                    options.add("NETHER");
+                    options.add("THE_END");
+                }
+            }
             if (args[0].equalsIgnoreCase("create")) {
                 if (args.length == 2) {
                     Stratosphere.getMyConfig().getSchematicTrees().forEach((schematicTree) -> options.add(schematicTree.getIdentifier()));
@@ -1294,7 +1488,10 @@ public class IslandCommand extends AbstractQuaintCommand {
                 }
             }
             if (args[0].equalsIgnoreCase("invite") || args[0].equalsIgnoreCase("accept")
-                    || args[0].equalsIgnoreCase("deny") || args[0].equalsIgnoreCase("join")) {
+                    || args[0].equalsIgnoreCase("deny") || args[0].equalsIgnoreCase("join")
+                    || args[0].equalsIgnoreCase("visit") || args[0].equalsIgnoreCase("trust")
+                    || args[0].equalsIgnoreCase("set-deleted") || args[0].equalsIgnoreCase("set-island")
+            ) {
                 if (args.length == 2) {
                     Bukkit.getOnlinePlayers().forEach((onlinePlayer) -> options.add(onlinePlayer.getName()));
                 }
@@ -1336,6 +1533,24 @@ public class IslandCommand extends AbstractQuaintCommand {
                 }
                 if (args.length == 3) {
                     options.add("");
+                }
+            }
+            if (args[0].equalsIgnoreCase("set-island")) {
+                if (args.length == 3) {
+                    File[] files = SkyblockIOBus.getPlotFolder().listFiles();
+                    if (files != null) {
+                        for (File file : files) {
+                            if (file.isDirectory()) {
+                                String name = file.getName().substring(0, file.getName().length() - 4);
+                                options.add(name);
+                            }
+                        }
+                    }
+                }
+            }
+            if (args[0].equalsIgnoreCase("set-biome")) {
+                if (args.length == 2) {
+                    Arrays.stream(Biome.values()).forEach((biome) -> options.add(biome.name()));
                 }
             }
         }

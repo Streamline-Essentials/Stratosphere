@@ -54,6 +54,7 @@ public enum PlotFlagIdentifiers {
         CAN_VEHICLE_DESTROY("can_vehicle_destroy"),
 
         ADMIN("admin"),
+        TRUST_USERS("trust_users"),
         PERMISSION_EDIT("permission_edit"),
         
         PARENT("parent", PlotFlagType.ROLE),

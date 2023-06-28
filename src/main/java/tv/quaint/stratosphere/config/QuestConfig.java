@@ -23,8 +23,6 @@ public class QuestConfig extends SimpleConfiguration {
 
     public QuestConfig() {
         super("quests.yml", Stratosphere.getInstance(), false);
-
-        reloadTheConfig();
     }
 
     @Override

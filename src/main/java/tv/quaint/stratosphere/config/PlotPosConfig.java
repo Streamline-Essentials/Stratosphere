@@ -13,12 +13,16 @@ import tv.quaint.stratosphere.plot.quests.QuestContainer;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class PlotPosConfig extends SimpleJsonDocument {
+    @Getter @Setter
+    private ConcurrentSkipListSet<PlotPosition> plotPositions;
+
     public PlotPosConfig() {
         super("plot-positions.json", Stratosphere.getInstance(), false);
     }
 
     @Override
     public void onInit() {
+        plotPositions = getPlotPositionsFromConfig();
     }
 
     @Override
@@ -26,9 +30,14 @@ public class PlotPosConfig extends SimpleJsonDocument {
 
     }
 
-    public ConcurrentSkipListSet<PlotPosition> getPlotPositions() {
-        reloadResource();
+    @Override
+    public void reloadResource() {
+        super.reloadResource();
 
+        plotPositions = getPlotPositionsFromConfig();
+    }
+
+    public ConcurrentSkipListSet<PlotPosition> getPlotPositionsFromConfig() {
         ConcurrentSkipListSet<PlotPosition> r = new ConcurrentSkipListSet<>();
 
         getResource().singleLayerKeySet("plot-positions").forEach(key -> {
@@ -50,6 +59,8 @@ public class PlotPosConfig extends SimpleJsonDocument {
     public void savePlotPosition(PlotPosition plotPosition) {
         getResource().set("plot-positions." + plotPosition.getIdentifier() + ".x", plotPosition.getX());
         getResource().set("plot-positions." + plotPosition.getIdentifier() + ".z", plotPosition.getZ());
+
+        getPlotPositions().add(plotPosition);
 
         save();
     }

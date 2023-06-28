@@ -70,7 +70,8 @@ public class SkyblockSchematic {
     }
 
     public static File getFile(String identifier) {
-        return new File(SkyblockIOBus.getSchematicsFolder(), identifier + ".schem");
+        if (! identifier.endsWith(".schem")) identifier += ".schem";
+        return new File(SkyblockIOBus.getSchematicsFolder(), identifier);
     }
 
     public static Clipboard read(String identifier) throws IllegalArgumentException {

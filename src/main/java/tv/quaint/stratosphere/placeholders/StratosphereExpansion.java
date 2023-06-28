@@ -67,6 +67,42 @@ public class StratosphereExpansion extends PlaceholderExpansion {
             return String.valueOf(plot.calculateScore());
         }
 
+        if (params.startsWith("get_")) {
+            String[] split = params.split("_");
+
+            String key = split[1];
+
+            SkyblockUser u = PlotUtils.getOrGetUser(key);
+            if (u == null) return null;
+            if (! u.isAlreadyInPlot()) return null;
+
+            SkyblockPlot p = PlotUtils.getOrGetPlot(u);
+            if (p == null) return null;
+
+            if (split.length == 2) {
+                return p.getOwner().getName();
+            } else if (split.length == 3) {
+                if (split[2].equalsIgnoreCase("score")) {
+                    return String.valueOf(p.calculateScore());
+                }
+                if (split[2].equalsIgnoreCase("owner")) {
+                    return String.valueOf(p.getOwner().getName());
+                }
+                if (split[2].equalsIgnoreCase("level_applied")) {
+                    return String.valueOf(p.getLevel());
+                }
+                if (split[2].equalsIgnoreCase("level_real")) {
+                    return String.valueOf(p.getRealLevel());
+                }
+                if (split[2].equalsIgnoreCase("level_max")) {
+                    return String.valueOf(p.getMaxLevel());
+                }
+                if (split[2].equalsIgnoreCase("xp")) {
+                    return String.valueOf(p.getXp());
+                }
+            }
+        }
+
         if (params.startsWith("top_")) {
             String[] split = params.split("_");
 

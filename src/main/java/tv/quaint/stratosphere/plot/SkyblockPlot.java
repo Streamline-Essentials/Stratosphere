@@ -3,6 +3,7 @@ package tv.quaint.stratosphere.plot;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
+import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.extent.clipboard.io.*;
 import com.sk89q.worldedit.function.operation.Operation;
@@ -11,15 +12,15 @@ import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.session.ClipboardHolder;
+import com.sk89q.worldedit.world.biome.BiomeType;
+import com.sk89q.worldedit.world.biome.BiomeTypes;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import me.clip.placeholderapi.PlaceholderAPI;
+import org.bukkit.*;
 import org.bukkit.scheduler.BukkitTask;
 import tv.quaint.savables.SavableResource;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import tv.quaint.storage.documents.SimpleJsonDocument;
@@ -28,10 +29,7 @@ import tv.quaint.stratosphere.config.bits.PlotPosition;
 import tv.quaint.stratosphere.plot.flag.PlotFlag;
 import tv.quaint.stratosphere.plot.members.PlotMember;
 import tv.quaint.stratosphere.plot.members.PlotRole;
-import tv.quaint.stratosphere.plot.members.basic.AdminRole;
-import tv.quaint.stratosphere.plot.members.basic.MemberRole;
-import tv.quaint.stratosphere.plot.members.basic.OwnerRole;
-import tv.quaint.stratosphere.plot.members.basic.VisitorRole;
+import tv.quaint.stratosphere.plot.members.basic.*;
 import tv.quaint.stratosphere.plot.pos.PlotFlagIdentifiers;
 import tv.quaint.stratosphere.plot.pos.PlotPos;
 import tv.quaint.stratosphere.plot.pos.SpawnPos;
@@ -41,6 +39,7 @@ import tv.quaint.stratosphere.plot.upgrades.PlotUpgrade;
 import tv.quaint.stratosphere.users.SkyblockUser;
 import tv.quaint.stratosphere.utils.MessageUtils;
 import tv.quaint.stratosphere.world.SkyblockIOBus;
+import tv.quaint.utils.MathUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -134,6 +133,8 @@ public class SkyblockPlot extends SavableResource {
     private long secondsPlayed;
     @Getter @Setter
     private PlotType plotType;
+    @Getter @Setter
+    private List<String> unlockedWorlds;
 
     @Getter @Setter
     private boolean lastTickPlayersWereOn;
@@ -194,6 +195,10 @@ public class SkyblockPlot extends SavableResource {
 
         this.heartMaxHealth = DEFAULT_MAX_HEART_HEALTH;
         this.heartCurrentHealth = DEFAULT_MAX_HEART_HEALTH;
+
+        this.plotType = PlotType.SOLO;
+
+        this.unlockedWorlds = new ArrayList<>();
 
         saveAll();
 
@@ -278,6 +283,8 @@ public class SkyblockPlot extends SavableResource {
         this.secondsPlayed = getOrSetDefault("seconds-played", 0L);
 
         this.plotType = PlotType.valueOf(getOrSetDefault("plot-type", PlotType.SOLO.name()));
+
+        this.unlockedWorlds = getOrSetDefault("unlocked-worlds", new ArrayList<>());
     }
 
     public void setupWorld(String instantiator, SchemTree tree) {
@@ -344,13 +351,69 @@ public class SkyblockPlot extends SavableResource {
 
         write("plot-type", getPlotType().name());
 
+        write("unlocked-worlds", getUnlockedWorlds());
+
         // Saves the schematic of the island
         saveSnapshotSchematic();
     }
 
+    public boolean isUnlocked(World.Environment environment) {
+        return unlockedWorlds.contains(environment.name());
+    }
+
+    public boolean isNetherUnlocked() {
+        return isUnlocked(World.Environment.NETHER);
+    }
+
+    public boolean isEndUnlocked() {
+        return isUnlocked(World.Environment.THE_END);
+    }
+
+    public void unlockNether() {
+        unlockedWorlds.add(World.Environment.NETHER.name());
+
+        Location pasteAt = getNetherSpawnLocation();
+
+        SchemTree stree = getRealSchemTree();
+        if (stree == null) {
+            MessageUtils.logDebug("SchemTree is null for " + getSchemTree());
+            return;
+        }
+
+        stree.getNether().paste(pasteAt);
+
+        messageMembers("&7The &bNETHER &7has been unlocked!");
+    }
+
+    public void unlockEnd() {
+        unlockedWorlds.add(World.Environment.THE_END.name());
+
+        Location pasteAt = getEndSpawnLocation();
+
+        SchemTree stree = getRealSchemTree();
+        if (stree == null) {
+            MessageUtils.logDebug("SchemTree is null for " + getSchemTree());
+            return;
+        }
+
+        stree.getEnd().paste(pasteAt);
+
+        messageMembers("&7The &bEND &7has been unlocked!");
+    }
+
+    public SchemTree getRealSchemTree() {
+        SchemTree tree = Stratosphere.getMyConfig().getSchematicTree(getSchemTree());
+
+        if (tree == null) {
+            tree = Stratosphere.getMyConfig().getSchematicTree("default");
+        }
+
+        return tree;
+    }
+
     public String getLocationalOffsetAsString() {
         World world = getLocationalOffset().getWorld();
-        if (world == null) world = SkyblockIOBus.getOrGetSkyblockWorld();
+        if (world == null) world = getWorld();
 
         return world.getName() + ";" +
                 getLocationalOffset().getBlockX() + "," + getLocationalOffset().getBlockY() + "," + getLocationalOffset().getBlockZ();
@@ -588,6 +651,14 @@ public class SkyblockPlot extends SavableResource {
         return SkyblockIOBus.getOrGetSkyblockWorld();
     }
 
+    public World getNether() {
+        return SkyblockIOBus.getOrGetSkyblockNether();
+    }
+
+    public World getEnd() {
+        return SkyblockIOBus.getOrGetSkyblockEnd();
+    }
+
     public double getSize() {
         return getRadius() * 2;
     }
@@ -597,8 +668,17 @@ public class SkyblockPlot extends SavableResource {
             from = Bukkit.createWorldBorder();
         }
 
+        World world = from.getWorld();
+        if (world == null) {
+            world = getWorld();
+        }
+
         from.setCenter(getLocationalOffset());
-        from.setSize(getSize());
+        if (world.equals(getNether())) {
+            from.setSize(getSize() / 8d);
+        } else {
+            from.setSize(getSize());
+        }
         from.setWarningDistance(0);
         from.setWarningTime(0);
         from.setDamageAmount(0);
@@ -691,11 +771,13 @@ public class SkyblockPlot extends SavableResource {
         PlotRole guest = new AdminRole(this);
         PlotRole member = new MemberRole(this);
         PlotRole visitor = new VisitorRole(this);
+        PlotRole trusted = new TrustedRole(this);
 
         roles.add(owner);
         roles.add(guest);
         roles.add(member);
         roles.add(visitor);
+        roles.add(trusted);
     }
 
     public PlotRole getRoleById(String identifier) {
@@ -754,6 +836,15 @@ public class SkyblockPlot extends SavableResource {
         PlotRole role = getRoleById("member");
         if (role == null) {
             role = new MemberRole(this);
+            addRole(role);
+        }
+        return role;
+    }
+
+    public PlotRole getTrustedRole() {
+        PlotRole role = getRoleById("trusted");
+        if (role == null) {
+            role = new TrustedRole(this);
             addRole(role);
         }
         return role;
@@ -880,9 +971,16 @@ public class SkyblockPlot extends SavableResource {
     }
 
     public void addMember(PlotMember member) {
+        addMember(member, true);
+    }
+
+    public void addMember(PlotMember member, boolean setPlot) {
         members.add(member);
-        member.getUser().setPlotUuid(this.getUuid());
-        member.getUser().saveAll();
+
+        if (setPlot) {
+            member.getUser().setPlotUuid(this.getUuid());
+            member.getUser().saveAll();
+        }
 
         messageMembers("&a" + member.getUser().getUsername() + " &7has joined the plot.");
     }
@@ -1096,6 +1194,20 @@ public class SkyblockPlot extends SavableResource {
 
         removeInvited(denier.getUuid());
         denier.sendMessage("&eYou have denied the invite to &c" + getOwnerName() + "&e's island.");
+    }
+
+    public void trustUser(SkyblockUser trusted, SkyblockUser sender) {
+        if (isMember(trusted.getUuid())) {
+            sender.sendMessage("&cThey are already a member of this island.");
+            return;
+        }
+
+        PlotRole role = getTrustedRole();
+
+        addMember(new PlotMember(UUID.fromString(trusted.getUuid()), role), false);
+
+        trusted.sendMessage("&eYou have been trusted on &c" + getOwnerName() + "&e's island.");
+        messageMembers("&c" + trusted.getName() + " &ehas been trusted on the island.");
     }
 
     public void promoteUser(SkyblockUser promoted, SkyblockUser sender) {
@@ -1358,15 +1470,17 @@ public class SkyblockPlot extends SavableResource {
     }
 
     public void saveSnapshotSchematic() {
-        CompletableFuture.runAsync(() -> {
-            File file = getNextSnapshotFile();
+//        CompletableFuture.runAsync(() -> {
+//            File file = getNextSnapshotFile();
+//
+//            try (ClipboardWriter writer = BuiltInClipboardFormat.FAST.getWriter(new FileOutputStream(file))) {
+//                writer.write(getSnapshot());
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        });
 
-            try (ClipboardWriter writer = BuiltInClipboardFormat.FAST.getWriter(new FileOutputStream(file))) {
-                writer.write(getSnapshot());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        return;
     }
 
     public File getSnapshotFile(int number) {
@@ -1455,6 +1569,8 @@ public class SkyblockPlot extends SavableResource {
     }
 
     public double calculateScore() {
+        if (getAchievedUpgrades() == null) setAchievedUpgrades(new ConcurrentSkipListSet<>());
+
         double weight_level = 100;
 //        int weight_members = 10;
         double weight_size = 7;
@@ -1512,12 +1628,41 @@ public class SkyblockPlot extends SavableResource {
             }
         }
 
+        while (getXp() >= getXpNeeded()) {
+            setXp(getXp() - getXpNeeded());
+            setLevel(getRealLevel() + 1);
+
+            messageMembers("&bYour island has leveled up to &d" + getRealLevel() + "&7!");
+        }
+
         ensureCorrectType();
 
         updateTopScore();
     }
 
+    public int getXpNeeded() {
+        return (int) MathUtils.eval(getLevelEquationFormatted());
+    }
+
+    public String getLevelEquationFormatted() {
+        String equation = Stratosphere.getMyConfig().getIslandLevellingEquation();
+
+        OfflinePlayer[] players = Bukkit.getOfflinePlayers();
+        if (players == null) throw new NullPointerException("Offline players array is null");
+        if (players.length == 0) throw new NullPointerException("Offline players array is empty");
+
+        return equation
+                .replace("%plot_level_real%", String.valueOf(getRealLevel()))
+                .replace("%plot_level_max%", String.valueOf(getMaxLevel()))
+                .replace("%plot_level_applied%", String.valueOf(getLevel()))
+                .replace("%plot_xp%", String.valueOf(getXp()))
+                ;
+    }
+
     public void ensureCorrectType() {
+        if (getMembers() == null) setMembers(new ConcurrentSkipListSet<>());
+        if (getPlotType() == null) setPlotType(PlotType.SOLO);
+
         if (getMembers().size() > 2 && (getPlotType() != PlotType.MULTI)) {
             setPlotType(PlotType.MULTI);
             saveAll();
@@ -1639,5 +1784,28 @@ public class SkyblockPlot extends SavableResource {
 
     public PlotPosition getPlotPosition() {
         return new PlotPosition(getIdentifier(), getLocationalOffset().getBlockX(), getLocationalOffset().getBlockZ());
+    }
+
+    public Location getNetherSpawnLocation() {
+        return new Location(getNether(), getLocationalOffset().getBlockX() / 8d, Stratosphere.getMyConfig().getIslandDefaultY(),getLocationalOffset().getBlockZ() / 8d);
+    }
+
+    public Location getEndSpawnLocation() {
+        return new Location(getEnd(), getLocationalOffset().getBlockX(), Stratosphere.getMyConfig().getIslandDefaultY(),getLocationalOffset().getBlockZ());
+    }
+
+    public boolean setBiome(String biome) {
+        try {
+            BiomeType type = BiomeTypes.get(biome);
+            if (type == null) return false;
+
+            getSnapshot().forEach(block -> type.apply(block.toBlockVector2()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        messageMembers("&aYour island's biome has been set to &e" + biome + "&a.");
+        return true;
     }
 }

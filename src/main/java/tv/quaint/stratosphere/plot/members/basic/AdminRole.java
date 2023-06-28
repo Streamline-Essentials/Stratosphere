@@ -10,6 +10,7 @@ public class AdminRole extends PlotRole {
         super("admin", "Admin", plot);
 
         addFlag(new PlotFlag(PlotFlagIdentifiers.ADMIN.getIdentifier(), true));
+        addFlag(new PlotFlag(PlotFlagIdentifiers.TRUST_USERS.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_PET_DAMAGE.getIdentifier(), true));
         addFlag(new PlotFlag(PlotFlagIdentifiers.CAN_VILLAGER_DAMAGE.getIdentifier(), true));
 

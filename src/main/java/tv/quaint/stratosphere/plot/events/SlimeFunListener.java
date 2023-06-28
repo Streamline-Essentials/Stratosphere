@@ -27,7 +27,6 @@ public class SlimeFunListener implements Listener {
     @EventHandler
     public void onInteractMachineEvent(PlayerRightClickEvent event) {
         Player player = event.getPlayer();
-        if (event.getSlimefunItem().isEmpty() && event.getSlimefunBlock().isEmpty()) return;
 
         if (PlotListener.shouldCancel(player, PlotFlagIdentifiers.CAN_SLIMEFUN_INTERACT.getIdentifier())) {
             event.getInteractEvent().setCancelled(true);

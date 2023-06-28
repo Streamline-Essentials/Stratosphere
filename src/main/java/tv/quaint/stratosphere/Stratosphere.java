@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.plugin.java.JavaPlugin;
-import tv.quaint.objects.handling.derived.IPluginEventable;
 import tv.quaint.stratosphere.commands.IslandCommand;
 import tv.quaint.stratosphere.config.*;
 import tv.quaint.stratosphere.placeholders.StratosphereExpansion;
@@ -15,9 +13,9 @@ import tv.quaint.stratosphere.plot.SkyblockPlot;
 import tv.quaint.stratosphere.plot.events.BukkitListener;
 import tv.quaint.stratosphere.plot.events.PlotListener;
 import tv.quaint.stratosphere.plot.events.SlimeFunListener;
+import tv.quaint.stratosphere.plot.timers.PlotKeepAliveTicker;
 import tv.quaint.stratosphere.plot.timers.PlotXPTimer;
 import tv.quaint.stratosphere.plot.timers.UserDustTimer;
-import tv.quaint.stratosphere.plot.timers.PlotKeepAliveTicker;
 import tv.quaint.stratosphere.users.SkyblockUser;
 
 public class Stratosphere extends BukkitBase {

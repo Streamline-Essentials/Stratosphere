@@ -1,5 +1,6 @@
 package tv.quaint.stratosphere.plot;
 
+import mc.obliviate.inventory.InventoryAPI;
 import tv.quaint.stratosphere.utils.MessageUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -31,6 +32,7 @@ public class PlotUtils {
     private static ConcurrentSkipListMap<Date, Location> polledLocations = new ConcurrentSkipListMap<>();
 
     public static void initImmediately() {
+        new InventoryAPI(Stratosphere.getInstance()).init();
     }
 
     @Getter @Setter
@@ -74,7 +76,10 @@ public class PlotUtils {
         getPlots().forEach(p -> {
             if (plot.get() != null) return;
 
-            if (p.isMember(player)) plot.set(p);
+            if (p.isMember(player)) {
+                if (p.getMember(player).getRole().getIdentifier().equals("trusted")) return;
+                plot.set(p);
+            }
         });
 
         return plot.get();
@@ -100,10 +105,36 @@ public class PlotUtils {
         SkyblockPlot plot = getPlot(uuid);
         if (plot != null) return plot;
 
+        if (! plotFileExists(uuid)) return null;
+
         plot = new SkyblockPlot(uuid);
         loadPlot(plot);
 
         return plot;
+    }
+
+    public static boolean plotFileExists(String uuid) {
+        File[] files = SkyblockIOBus.getPlotFolder().listFiles();
+
+        if (files == null) return false;
+
+        for (File file : files) {
+            if (file.getName().equals(uuid + ".json")) return true;
+        }
+
+        return false;
+    }
+
+    public static boolean userFileExists(String uuid) {
+        File[] files = SkyblockIOBus.getUsersFolder().listFiles();
+
+        if (files == null) return false;
+
+        for (File file : files) {
+            if (file.getName().equals(uuid + ".json")) return true;
+        }
+
+        return false;
     }
 
     public static SkyblockPlot getOrGetPlot(SkyblockUser user) {
@@ -156,10 +187,16 @@ public class PlotUtils {
 
         loadPlot(plot);
 
+        Stratosphere.getMyConfig().incrementAbsolutePlotsAmount(1);
+
         return plot;
     }
 
     public static SkyblockPlot getPlotByLocation(Location location) {
+        World locationWorld = location.getWorld();
+        if (locationWorld == null) return null;
+        if (! locationWorld.getName().equals(Stratosphere.getMyConfig().getIslandWorldName())) return null;
+
         AtomicReference<SkyblockPlot> plot = new AtomicReference<>(null);
 
         getPlots().forEach(p -> {
@@ -240,6 +277,8 @@ public class PlotUtils {
 
         SkyblockUser user = getUser(uuid);
         if (user != null) return user;
+
+        if (! userFileExists(uuid)) return null;
 
         user = new SkyblockUser(uuid);
 
